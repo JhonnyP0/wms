@@ -1,4 +1,4 @@
--- Użytkownicy
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE, 
@@ -47,26 +47,27 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- Produkty
-INSERT INTO products (name, sku, description) VALUES
-  ('Wkrętarka Bosch', 'WRK-BOSCH-01', 'Wkrętarka akumulatorowa'),
-  ('Puszka 500ml', 'PUSZKA-500', 'Metalowa puszka 500 ml'),
-  ('Folia stretch', 'FOLIA-STRETCH', 'Folia stretch 23µm, 2kg'),
-  ('Kartony 30x30x30', 'KARTON-30', 'Kartony tekturowe'),
-  ('Taśma pakowa', 'TASMA-PAK', 'Taśma do pakowania'),
-  ('Karton A4', 'KARTON-A4', 'Karton formatu A4'),
-  ('Pojemnik plastikowy', 'POJ-PLAST', 'Pojemnik z uchwytem'),
-  ('Marker permanentny', 'MARKER-01', 'Czarny marker'),
-  ('Naklejki ostrzegawcze', 'NAKLEJKA-OSTR', 'Zestaw etykiet'),
-  ('Etykiety termiczne', 'ETYK-TERM', 'Etykiety 1000 szt. rolka');
 
--- Lokacje A1 do C5
+INSERT INTO products (name, sku, description) VALUES
+('Wkretarka Bosch', 'WRK-BOSCH-01', 'Wkretarka akumulatorowa'),
+('Puszka 500ml', 'PUSZKA-500', 'Metalowa puszka 500 ml'),
+('Folia stretch', 'FOLIA-STRETCH', 'Folia stretch 23um, 2kg'),
+('Kartony 30x30x30', 'KARTON-30', 'Kartony tekturowe'),
+('Tasma pakowa', 'TASMA-PAK', 'Tasma do pakowania'),
+('Karton A4', 'KARTON-A4', 'Karton formatu A4'),
+('Pojemnik plastikowy', 'POJ-PLAST', 'Pojemnik z uchwytem'),
+('Marker permanentny', 'MARKER-01', 'Czarny marker'),
+('Naklejki ostrzegawcze', 'NAKLEJKA-OSTR', 'Zestaw etykiet'),
+('Etykiety termiczne', 'ETYK-TERM', 'Etykiety 1000 szt. rolka');
+
+
+
 INSERT INTO locations (code) VALUES
   ('A1'), ('A2'), ('A3'), ('A4'), ('A5'),
   ('B1'), ('B2'), ('B3'), ('B4'), ('B5'),
   ('C1'), ('C2'), ('C3'), ('C4'), ('C5');
 
--- Stan magazynowy (product_id od 1 do 10, location_id od 1 do 15)
+
 INSERT INTO inventory (product_id, location_id, quantity) VALUES
   (1, 1, 30),
   (2, 2, 100),

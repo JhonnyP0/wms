@@ -108,9 +108,10 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route("/regal/<code>")
+#login_required
 def regal_detail(code):
     conn=db_connect()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM inventory JOIN products ON inventory.product_id = products.id JOIN locations ON inventory.location_id = locations.id WHERE locations.code = %s", (code,))
     items = cursor.fetchall()
     print("Code:", code)
@@ -119,38 +120,40 @@ def regal_detail(code):
 
 
 @app.route('/dashboard', methods=['GET'])
-@login_required
+#@login_required
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/map', methods=['GET'])
-@login_required
-def map():
-    return render_template('map.html')
-
 @app.route('/logout', methods=['GET'])
-@login_required
+#@login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 @app.route('/poducts', methods=['GET'])
-@login_required
+#@login_required
 def products():
     return render_template('products.html')
 
 @app.route('/administration', methods=['GET'])
-@login_required
+#@login_required
 def administration():
-    return render_template('administration.html')
+    return render_template('map.html')
 
 @app.route('/orders', methods=['GET'])
-@login_required
+#@login_required
 def orders():
-    return render_template('orders.html')
+    conn=db_connect()
+    cursor=conn.cursor(dictionary=True)
+    cursor.execute("INSERT INTO orders (user_id) VALUES (1);")
+    cursor.execute("SELECT * FROM orders")
+    orders=cursor.fetchall()
+    cursor.close()
+    conn.close()    
+    return render_template('orders.html',orders=orders)
 
 @app.route('/settings', methods=['GET'])
-@login_required
+#@login_required
 def settings():
     return render_template('settings.html')
 
