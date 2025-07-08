@@ -19,8 +19,7 @@ login_manager.login_view = 'login'
 #database connection
 def db_connect():
     return mysql.connector.connect(
-    host = 'localhost',                     #for development
-    #host = os.getenv('DB_HOST'),           #for production
+    host = os.getenv('DB_HOST'),
     port = os.getenv('DB_PORT'),
     user = os.getenv('DB_USER'),
     password = os.getenv('DB_PASSWORD'),
@@ -106,36 +105,54 @@ def register():
                 conn.close()
             except:
                 pass
-
-
-
     return render_template('register.html', form=form)
+
+@app.route("/regal/<code>")
+def regal_detail(code):
+    conn=db_connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM inventory JOIN products ON inventory.product_id = products.id JOIN locations ON inventory.location_id = locations.id WHERE locations.code = %s", (code,))
+    items = cursor.fetchall()
+    print("Code:", code)
+    print("Items:", items)
+    return render_template("regal_detail.html", code=code, items=items)
+
 
 @app.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/account', methods=['GET'])
+@app.route('/map', methods=['GET'])
 @login_required
-def account():
-    return render_template('account.html')
-
-@app.route('/settings', methods=['GET'])
-@login_required
-def settings():
-    return render_template('settings.html')
-
-@app.route('/contact', methods=['GET'])
-@login_required
-def contact():
-    return render_template('contact.html')
+def map():
+    return render_template('map.html')
 
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/poducts', methods=['GET'])
+@login_required
+def products():
+    return render_template('products.html')
+
+@app.route('/administration', methods=['GET'])
+@login_required
+def administration():
+    return render_template('administration.html')
+
+@app.route('/orders', methods=['GET'])
+@login_required
+def orders():
+    return render_template('orders.html')
+
+@app.route('/settings', methods=['GET'])
+@login_required
+def settings():
+    return render_template('settings.html')
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5050, debug=True)

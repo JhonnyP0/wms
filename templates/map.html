@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa magazynu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+<h2 style="text-align: center; margin-top: 1rem;">Mapa magazynu</h2>
+<div id="map"></div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: -1,
+        maxZoom: 1,
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        touchZoom: false
+    });
+
+
+    const bounds = [[0, 0], [600, 800]];
+    map.fitBounds(bounds);
+
+
+    const regaly = [
+        { name: "A1", coords: [[100, 250], [180, 370]] },
+        { name: "A2", coords: [[100, 430], [180, 550]] },
+        { name: "B1", coords: [[220, 250], [300, 370]] },
+        { name: "B2", coords: [[220, 430], [300, 550]] },
+        { name: "C1", coords: [[340, 250], [420, 370]] },
+        { name: "C2", coords: [[340, 430], [420, 550]] },
+    ];
+
+
+    regaly.forEach(r => {
+        L.rectangle(r.coords, { color: "blue", weight: 1, fillOpacity: 0.3 })
+            .addTo(map)
+            .on('click', () => window.location.href = `/regal/${r.name}`)
+            .bindTooltip(`Regał ${r.name}`, { permanent: true, direction: "center" });
+    });
+</script>
+
+</body>
+</html>
