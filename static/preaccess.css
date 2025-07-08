@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+
+body
+{
+    overflow: hidden;
+    font-family: "Varela Round", sans-serif;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    justify-items: center;
+    text-align: center;
+
+}
+
+input::placeholder{
+  padding: 1em;
+}
+
+#center
+{ 
+    grid-column: 2 /3;
+    grid-row: 2 / 3;
+    justify-self: center;
+    border-radius: 40px;
+    background-color: rgba(225, 233, 245, 0.795);
+    margin:1em;
+    padding: 2em;
+    -webkit-box-shadow: 8px 8px 24px -19px rgba(66, 68, 90, 1);
+    -moz-box-shadow: 8px 8px 24px -19px rgba(66, 68, 90, 1);
+    box-shadow: 8px 8px 24px -19px rgba(66, 68, 90, 1);
+    opacity: 0;
+    transform: translateY(80px);
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+a
+{
+    text-decoration: none;
+    color: black;
+}
+
+#logo
+{
+color: rgb(255, 187, 0);
+}
+.varela-round-regular {
+    font-family: "Varela Round", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+input{
+    border: 1px, rgb(92, 91, 91), solid;
+    border-radius: 40px;
+    width: 20em;
+    height: 2em;
+    background-color: rgba(216, 216, 216, 0.585);
+    transition: 0.5s;
+    padding-left: 1em;
+}
+
+input:hover
+{
+    background-color: rgba(36, 183, 124, 0.18);
+    transition: 0.5s;
+}
+
+.alert-success{
+color: rgba(30, 197, 38, 0.798);
+}
+
+.alert-error{
+color: rgba(165, 42, 42, 0.632);
+}
