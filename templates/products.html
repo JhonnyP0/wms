@@ -6,13 +6,13 @@
     <title>WMS</title>
 </head>
 <body>
-    <h1>dashboard</h1>
-    <navi>
+<h1><a href="{{url_for('dashboard')}}">dashboard</a></h1>    <navi>
         <ul>
             <li><a href="{{url_for('products')}}">Products</a></li>
             <li><a href="{{url_for('settings')}}">Settings</a></li>
             <li><a href="{{url_for('administration')}}">Administration</a></li>
             <li><a href="{{url_for('orders')}}">Orders</a></li>
+            <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
         </ul>
     </navi>
 </body>
