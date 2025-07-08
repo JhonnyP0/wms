@@ -145,7 +145,6 @@ def administration():
 def orders():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
-    cursor.execute("INSERT INTO orders (user_id) VALUES (1);")
     cursor.execute("SELECT * FROM orders")
     orders=cursor.fetchall()
     cursor.close()

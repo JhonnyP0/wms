@@ -18,6 +18,7 @@ services:
       retries: 5
     env_file:
       - .env
+    restart: always
 
 
   wms:
@@ -34,6 +35,7 @@ services:
       - network
     env_file:
       - .env
+    restart: always
 
 
 networks:
