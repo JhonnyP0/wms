@@ -108,7 +108,7 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route("/regal/<code>")
-#login_required
+@login_required
 def regal_detail(code):
     conn=db_connect()
     cursor = conn.cursor(dictionary=True)
@@ -119,13 +119,13 @@ def regal_detail(code):
     return render_template("regal_detail.html", code=code, items=items)
 
 @app.route('/logout', methods=['GET'])
-#@login_required
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 @app.route('/products', methods=['GET'])
-#@login_required
+@login_required
 def products():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
@@ -136,12 +136,12 @@ def products():
     return render_template('products.html',prods=prods)
 
 @app.route('/dashboard', methods=['GET'])
-#@login_required
+@login_required
 def dashboard():
     return render_template('dashboard.html')
 
 @app.route('/orders', methods=['GET'])
-#@login_required
+@login_required
 def orders():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
