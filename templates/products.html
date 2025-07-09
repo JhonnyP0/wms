@@ -6,14 +6,38 @@
     <title>WMS</title>
 </head>
 <body>
-<h1><a href="{{url_for('dashboard')}}">dashboard</a></h1>    <navi>
+<header>
+    <nav>
         <ul>
-            <li><a href="{{url_for('products')}}">Products</a></li>
-            <li><a href="{{url_for('settings')}}">Settings</a></li>
-            <li><a href="{{url_for('administration')}}">Administration</a></li>
-            <li><a href="{{url_for('orders')}}">Orders</a></li>
+            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+            <li><a href="{{url_for('products')}}">Produkty</a></li>
+            <li><a href="{{url_for('orders')}}">Zamówienia</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
         </ul>
-    </navi>
+    </nav>
+</header>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>User ID</th>
+      <th>Data utworzenia</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for prod in prods %}
+    <tr>
+      <td>{{ prod.id }}</td>
+      <td>{{ prod.name }}</td>
+      <td>{{ prod.sku }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="4">Brak produktow do wyswietlenia </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 </body>
 </html>

@@ -9,28 +9,27 @@
     </head>
 
     <body>
-        <div id="center">
-            <h1 id="logo">WMS</h1>
-            <form method="post">
-                {{form.hidden_tag()}}
-                {% with messages = get_flashed_messages(with_categories=True) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            
-                {% endwith %}
-                <p>{{form.username(placeholder="Username")}}</p>
-                <p>{{form.password(placeholder="Password")}}</p>
-                <p>{{form.confirm_password(placeholder="Confirm password")}}</p>
-                <p>{{form.email(placeholder="E-mail")}}</p>
-                <p>{{ form.submit() }}</p>
-                <a href="{{ url_for('login') }}">Already have an account? Log In</a>
-            </div>
+  <div id="center">
+    <h1 id="logo">WMS</h1>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+      <p>{{ form.username(placeholder="Username") }}</p>
+      <p>{{ form.password(placeholder="Password") }}</p>
+      <p>{{ form.confirm_password(placeholder="Confirm password") }}</p>
+      <p>{{ form.email(placeholder="E-mail") }}</p>
+      <p>{{ form.submit() }}</p>
+    </form>
+    <a href="{{ url_for('login') }}">Masz juz konto? Zaloguj sie</a>
+  </div>
+</body>
 
-        </form>
-    </body>
 
 
 </html>

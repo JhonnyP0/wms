@@ -1,37 +1,62 @@
 @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
 
-body
-{
-    overflow: hidden;
-    font-family: "Varela Round", sans-serif;
-    padding: 0;
+
+#map {
+    height: 600px;
+    width: 100%;
+    align-self: center;
+    flex-grow: 1;
+}
+
+body {
+     font-family: "Varela Round", sans-serif;
     margin: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
-    justify-items: center;
-    text-align: center;
-
-}
-
-ul
-{
-    text-decoration: none;
-    list-style-type: none;
+    padding: 0;
     display: flex;
-}
-li
-{
-    display: inline;
-    padding: 1em;
+  flex-direction: column;
 }
 
-a
-{
-    text-decoration: none;
-    color: initial;
+header {
+  background-color: #333;
+  color: rgb(252, 193, 0);
+  padding: 10px 20px;
 }
 
-#map{
-width: 30em;
+
+a{
+    color: rgb(252, 193, 0);
+    text-shadow: 1px 1px 2px black;
+    transition:0.4s;
+}
+
+nav {
+  display: inline-block;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 15px;
+}
+
+nav ul li a {
+  text-decoration: none;
+  font-weight: bold;
+}
+
+a:hover {
+    transition:0.4s;
+    color: black;
+    text-shadow: 1px 1px 2px rgb(252, 193, 0);;
+}
+
+table
+{
+  border-collapse: collapse;
+  margin:25px;
+  font-size: 0.8em;
+}
+
+table td{
+  border:1px, solid;
 }

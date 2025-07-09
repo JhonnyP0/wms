@@ -1,3 +1,4 @@
+-- Tworzenie tabel
 
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -9,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    sku VARCHAR(50) NOT NULL UNIQUE, -- kod produktu
+    sku VARCHAR(50) NOT NULL UNIQUE,
     description TEXT
 );
 
@@ -28,7 +29,6 @@ CREATE TABLE IF NOT EXISTS inventory (
     UNIQUE (product_id, location_id)
 );
 
-
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS orders (
     status ENUM('pending', 'shipped', 'cancelled') DEFAULT 'pending',
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,7 +46,13 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
+-- Użytkownicy nieoperacyjni; dla poprawnosci danych
+INSERT INTO users (username, password_hash, email) VALUES
+('admin', 'haslo', 'admin@example.com'),
+('janek', 'haslo', 'janek@example.com'),
+('ania', 'haslo', 'ania@example.com');
 
+-- Produkty
 INSERT INTO products (name, sku, description) VALUES
 ('Wkretarka Bosch', 'WRK-BOSCH-01', 'Wkretarka akumulatorowa'),
 ('Puszka 500ml', 'PUSZKA-500', 'Metalowa puszka 500 ml'),
@@ -60,27 +65,35 @@ INSERT INTO products (name, sku, description) VALUES
 ('Naklejki ostrzegawcze', 'NAKLEJKA-OSTR', 'Zestaw etykiet'),
 ('Etykiety termiczne', 'ETYK-TERM', 'Etykiety 1000 szt. rolka');
 
-
-
+-- Lokacje
 INSERT INTO locations (code) VALUES
-  ('A1'), ('A2'), ('A3'), ('A4'), ('A5'),
-  ('B1'), ('B2'), ('B3'), ('B4'), ('B5'),
-  ('C1'), ('C2'), ('C3'), ('C4'), ('C5');
+('A1'), ('A2'), ('A3'), ('A4'), ('A5'),
+('B1'), ('B2'), ('B3'), ('B4'), ('B5'),
+('C1'), ('C2'), ('C3'), ('C4'), ('C5');
 
-
+-- Stany magazynowe
 INSERT INTO inventory (product_id, location_id, quantity) VALUES
-  (1, 1, 30),
-  (2, 2, 100),
-  (3, 3, 60),
-  (4, 4, 45),
-  (5, 5, 75),
-  (6, 6, 40),
-  (7, 7, 20),
-  (8, 8, 50),
-  (9, 9, 90),
-  (10, 10, 70),
-  (1, 11, 10),
-  (2, 12, 25),
-  (3, 13, 35),
-  (4, 14, 15),
-  (5, 15, 5);
+(1, 1, 30),  (2, 2, 100), (3, 3, 60),
+(4, 4, 45),  (5, 5, 75),  (6, 6, 40),
+(7, 7, 20),  (8, 8, 50),  (9, 9, 90),
+(10, 10, 70),(1, 11, 10), (2, 12, 25),
+(3, 13, 35), (4, 14, 15), (5, 15, 5);
+
+-- Zamówienia
+INSERT INTO orders (user_id, status) VALUES
+(1, 'pending'),
+(2, 'shipped'),
+(3, 'cancelled');
+
+-- Pozycje zamówień
+-- Order 1 (user 1)
+INSERT INTO order_items (order_id, product_id, quantity) VALUES
+(1, 1, 2), (1, 3, 5), (1, 5, 1);
+
+-- Order 2 (user 2)
+INSERT INTO order_items (order_id, product_id, quantity) VALUES
+(2, 2, 10), (2, 4, 3);
+
+-- Order 3 (user 3)
+INSERT INTO order_items (order_id, product_id, quantity) VALUES
+(3, 6, 7), (3, 7, 2), (3, 10, 4);

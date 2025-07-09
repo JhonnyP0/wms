@@ -1,20 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-    <meta charset="UTF-8" />
-    <title>WMS</title>
+    <meta charset="UTF-8">
+    <title>Mapa magazynu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <h1><a href="{{url_for('dashboard')}}">dashboard</a></h1>
-    <navi>
+
+<header>
+    <nav>
         <ul>
-            <li><a href="{{url_for('products')}}">Products</a></li>
-            <li><a href="{{url_for('settings')}}">Settings</a></li>
-            <li><a href="{{url_for('administration')}}">Administration</a></li>
-            <li><a href="{{url_for('orders')}}">Orders</a></li>
+            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+            <li><a href="{{url_for('products')}}">Produkty</a></li>
+            <li><a href="{{url_for('orders')}}">Zamówienia</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
         </ul>
-    </navi>
+    </nav>
+</header>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: -1,
+        maxZoom: 1,
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        touchZoom: false,
+        attributionControl: false
+    });
+
+    const bounds = [[0, 0], [600, 800]];
+    map.fitBounds(bounds);
+
+    const regaly = [
+        { name: "A1", coords: [[100, 250], [180, 370]] },
+        { name: "A2", coords: [[100, 430], [180, 550]] },
+        { name: "B1", coords: [[220, 250], [300, 370]] },
+        { name: "B2", coords: [[220, 430], [300, 550]] },
+        { name: "C1", coords: [[340, 250], [420, 370]] },
+        { name: "C2", coords: [[340, 430], [420, 550]] },
+    ];
+
+    regaly.forEach(r => {
+        L.rectangle(r.coords, { color: "rgb(252, 193, 0)", weight: 2, fillOpacity: 0.5 })
+            .addTo(map)
+            .on('click', () => window.location.href = `/regal/${r.name}`)
+            .bindTooltip(`Regał ${r.name}`, { permanent: true, direction: "center" });
+    });
+</script>
+
 </body>
 </html>

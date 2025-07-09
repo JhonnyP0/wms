@@ -118,27 +118,27 @@ def regal_detail(code):
     print("Items:", items)
     return render_template("regal_detail.html", code=code, items=items)
 
-
-@app.route('/dashboard', methods=['GET'])
-#@login_required
-def dashboard():
-    return render_template('dashboard.html')
-
 @app.route('/logout', methods=['GET'])
 #@login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/poducts', methods=['GET'])
+@app.route('/products', methods=['GET'])
 #@login_required
 def products():
-    return render_template('products.html')
+    conn=db_connect()
+    cursor=conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM products")
+    prods=cursor.fetchall()
+    cursor.close()
+    conn.close()    
+    return render_template('products.html',prods=prods)
 
-@app.route('/administration', methods=['GET'])
+@app.route('/dashboard', methods=['GET'])
 #@login_required
-def administration():
-    return render_template('map.html')
+def dashboard():
+    return render_template('dashboard.html')
 
 @app.route('/orders', methods=['GET'])
 #@login_required
@@ -150,11 +150,6 @@ def orders():
     cursor.close()
     conn.close()    
     return render_template('orders.html',orders=orders)
-
-@app.route('/settings', methods=['GET'])
-#@login_required
-def settings():
-    return render_template('settings.html')
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5050, debug=True)

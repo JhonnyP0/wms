@@ -6,6 +6,16 @@
     <title>Regał {{ code }}</title>
 </head>
 <body>
+    <header>
+    <nav>
+        <ul>
+            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+            <li><a href="{{url_for('products')}}">Produkty</a></li>
+            <li><a href="{{url_for('orders')}}">Zamówienia</a></li>
+            <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
+        </ul>
+    </nav>
+</header>
     <h2>Zawartość regału {{ code }}</h2>
     {% if items %}
         <ul>
