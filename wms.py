@@ -107,41 +107,71 @@ def register():
                 pass
     return render_template('register.html', form=form)
 
-@app.route("/regal/<code>")
-@login_required
-def regal_detail(code):
+@app.route("/regal/<reg_code>")
+#@login_required
+def regal_detail(reg_code):
+    return render_template("shelf.html", reg_code=reg_code)
+
+@app.route("/pozycja/<polka_code>/<regal_code>")
+#@login_required
+def polka(polka_code,regal_code):
     conn=db_connect()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM inventory JOIN products ON inventory.product_id = products.id JOIN locations ON inventory.location_id = locations.id WHERE locations.code = %s", (code,))
+
+    query="""
+            SELECT * 
+            FROM 
+                inventory 
+            JOIN
+                products ON inventory.product_id = products.id 
+            JOIN
+                locations ON inventory.location_id = locations.id
+            WHERE
+                locations.code = %s
+        """
+    cursor.execute(query, (polka_code,))
     items = cursor.fetchall()
-    print("Code:", code)
-    print("Items:", items)
-    return render_template("regal_detail.html", code=code, items=items)
+    return render_template("regal_detail.html", polka_code=polka_code, items=items, regal_code=regal_code)
 
 @app.route('/logout', methods=['GET'])
-@login_required
+#@login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 @app.route('/products', methods=['GET'])
-@login_required
+#@login_required
 def products():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM products")
+    
+    query="""
+            SELECT
+                i.id AS inventory_id,
+                p.name AS product_name, -- Tutaj pobieramy nazwę
+                p.sku,
+                p.description,
+                i.location_id,
+                i.quantity
+            FROM
+                inventory i
+            JOIN
+                products p ON i.product_id = p.id;
+        """
+
+    cursor.execute(query)
     prods=cursor.fetchall()
     cursor.close()
     conn.close()    
     return render_template('products.html',prods=prods)
 
 @app.route('/dashboard', methods=['GET'])
-@login_required
+#@login_required
 def dashboard():
     return render_template('dashboard.html')
 
 @app.route('/orders', methods=['GET'])
-@login_required
+#@login_required
 def orders():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
@@ -152,4 +182,4 @@ def orders():
     return render_template('orders.html',orders=orders)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5050, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=False)

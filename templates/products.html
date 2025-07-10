@@ -20,21 +20,27 @@
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>User ID</th>
-      <th>Data utworzenia</th>
+      <th>ID Inwentarza</th>
+      <th>Nazwa Produktu</th>
+      <th>SKU</th>
+      <th>Opis</th>
+      <th>ID Lokalizacji</th>
+      <th>Ilość</th>
     </tr>
   </thead>
   <tbody>
-    {% for prod in prods %}
-    <tr>
-      <td>{{ prod.id }}</td>
-      <td>{{ prod.name }}</td>
-      <td>{{ prod.sku }}</td>
-    </tr>
+      {% for item in prods %}
+      <tr>
+          <td>{{ item.inventory_id }}</td>
+          <td>{{ item.product_name }}</td>
+          <td>{{ item.sku }}</td>
+          <td>{{ item.description }}</td>
+          <td>{{ item.location_id }}</td>
+          <td>{{ item.quantity }}</td>
+      </tr>
     {% else %}
     <tr>
-      <td colspan="4">Brak produktow do wyswietlenia </td>
+      <td colspan="6">Brak produktów do wyświetlenia.</td>
     </tr>
     {% endfor %}
   </tbody>
