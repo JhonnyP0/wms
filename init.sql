@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE
+    email VARCHAR(100) NOT NULL UNIQUE,
+    is_admin BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -44,12 +45,12 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
-INSERT INTO users (username, password_hash, email) VALUES
-('admin', 'pbkdf2:sha256:260000$g951y2B0vP0N5s1L$1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'admin@example.com'),
-('janek', 'pbkdf2:sha256:260000$x7Y0zW2vQ3R4s5T6$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', 'janek@example.com'),
-('ania', 'pbkdf2:sha256:260000$aBcDeFgHiJkLmNoP$f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2', 'ania@example.com'),
-('piotr', 'pbkdf2:sha256:260000$qWeRtYuIoPaSdFgH$9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b', 'piotr@example.com'),
-('zofia', 'pbkdf2:sha256:260000$zXcVbNmQaSdFgHjK$3c2b1a0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b', 'zofia@example.com');
+INSERT INTO users (username, password_hash, email, is_admin) VALUES
+('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
+('janek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'janek@example.com', FALSE),
+('ania',  'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'ania@example.com', FALSE),
+('piotr', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'piotr@example.com', FALSE),
+('zofia', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'zofia@example.com', FALSE);
 
 INSERT INTO products (name, sku, description) VALUES
 ('Wkretarka Bosch', 'WRK-BOSCH-01', 'Wkretarka akumulatorowa 18V'),
@@ -165,6 +166,7 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'C2-06'), 3),
 (25, (SELECT id FROM locations WHERE code = 'C2-06'), 20);
 
+-- Wstawianie danych do tabeli orders
 INSERT INTO orders (user_id, status) VALUES
 (1, 'pending'),
 (2, 'shipped'),
@@ -177,6 +179,7 @@ INSERT INTO orders (user_id, status) VALUES
 (4, 'shipped'),
 (5, 'pending');
 
+-- Wstawianie danych do tabeli order_items
 INSERT INTO order_items (order_id, product_id, quantity) VALUES
 (1, 1, 2), (1, 3, 5), (1, 5, 1);
 

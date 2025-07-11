@@ -13,11 +13,10 @@
             <li><a href="{{url_for('products')}}">Produkty</a></li>
             <li><a href="{{url_for('orders')}}">Zamówienia</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
-            <button>Dodaj produkt</button>
+            <li><a href="{{url_for('add_prod')}}">Dodaj produkt</a></li>
         </ul>
     </nav>
 </header>
-
 <table>
   <thead>
     <tr>
@@ -25,7 +24,7 @@
       <th>Nazwa Produktu</th>
       <th>SKU</th>
       <th>Opis</th>
-      <th>ID Lokalizacji</th>
+      <th>Lokalizacja</th>
       <th>Ilość</th>
     </tr>
   </thead>
@@ -36,7 +35,7 @@
           <td>{{ item.product_name }}</td>
           <td>{{ item.sku }}</td>
           <td>{{ item.description }}</td>
-          <td>{{ item.location_id }}</td>
+          <td>{{ item.location_code }}</td>
           <td>{{ item.quantity }}</td>
       </tr>
     {% else %}

@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
+from functools import wraps
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 import os
-from source import User, LoginForm, RegisterForm
+from source import User, LoginForm, RegisterForm, AddProdForm
 
 load_dotenv()
 
@@ -19,7 +20,8 @@ login_manager.login_view = 'login'
 #database connection
 def db_connect():
     return mysql.connector.connect(
-    host = os.getenv('DB_HOST'),
+    host='localhost',
+    #host = os.getenv('DB_HOST'),
     port = os.getenv('DB_PORT'),
     user = os.getenv('DB_USER'),
     password = os.getenv('DB_PASSWORD'),
@@ -40,6 +42,36 @@ def userload(user_id):
     if user:
         return User(user['id'], user['username'], user['password_hash'])
     return None
+
+#dekorator admin_required
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Musisz się zalogować, aby uzyskać dostęp do tej strony.', 'warning')
+            return redirect(url_for('login')) 
+        if not current_user.is_admin:
+            flash('Nie masz wystarczających uprawnień, aby uzyskać dostęp do tej strony.', 'danger')
+            return redirect(url_for('dashboard')) 
+        return f(*args, **kwargs)
+    return decorated_function
+
+# def admin_push():
+#     conn=db_connect()
+#     cursor=conn.cursor()
+    
+#     username="admin"
+#     password=generate_password_hash("adminpass")
+#     email="admin@admin.admin"
+#     is_admin=True
+
+#     query="INSERT INTO users (username, password_hash, email, is_admin) VALUES (%s, %s, %s, %s)"
+#     cursor.execute(query, (username,password,email,is_admin))
+#     conn.commit()
+#     cursor.close()
+#     conn.close()
+
+# admin_push()
 
 @app.route('/', methods=['GET','POST'])
 def login():
@@ -148,15 +180,17 @@ def products():
     query="""
             SELECT
                 i.id AS inventory_id,
-                p.name AS product_name, -- Tutaj pobieramy nazwę
+                p.name AS product_name,
                 p.sku,
                 p.description,
-                i.location_id,
+                l.code AS location_code, -- Tutaj pobieramy kod lokalizacji z tabeli 'locations'
                 i.quantity
             FROM
                 inventory i
             JOIN
-                products p ON i.product_id = p.id;
+                products p ON i.product_id = p.id
+            JOIN
+                locations l ON i.location_id = l.id; -- Tutaj jest JOIN z tabelą 'locations'
         """
 
     cursor.execute(query)
@@ -181,5 +215,79 @@ def orders():
     conn.close()    
     return render_template('orders.html',orders=orders)
 
+@app.route('/add_prod', methods=['GET','POST'])
+@login_required
+@admin_required
+def add_prod():
+    """
+    Obsługuje dodawanie nowych produktów do bazy danych.
+    Najprostsza wersja: wstawia nowy produkt i przypisuje go do lokalizacji.
+    """
+    form = AddProdForm()
+
+    if form.validate_on_submit():
+        name = form.name.data
+        sku = form.sku.data
+        description = form.description.data
+        location_code = form.location.data.upper().strip()
+        quantity = form.quantity.data
+
+        conn = db_connect()
+        if conn is None:
+        
+            flash('Błąd połączenia z bazą danych. Spróbuj ponownie.', 'danger')
+            return render_template('add_prod.html', form=form)
+
+        cursor = conn.cursor()
+        
+        try:
+
+            cursor.execute("SELECT id FROM locations WHERE code = %s", (location_code,))
+            location_data = cursor.fetchone()
+            location_id = None
+
+            if location_data:
+                location_id = location_data[0]
+            else:
+                cursor.execute("INSERT INTO locations (code) VALUES (%s)", (location_code,))
+                conn.commit() 
+                location_id = cursor.lastrowid 
+
+            if location_id is None:
+                flash('Nie udało się ustalić ID lokalizacji.', 'danger')
+                return render_template('add_prod.html', form=form)
+            cursor.execute("INSERT INTO products (name, sku, description) VALUES (%s, %s, %s)",
+                           (name, sku, description))
+            conn.commit() 
+            product_id = cursor.lastrowid 
+
+            if product_id is None:
+                flash('Nie udało się dodać produktu.', 'danger')
+                return render_template('add_prod.html', form=form)
+
+
+            cursor.execute("INSERT INTO inventory (product_id, location_id, quantity) VALUES (%s, %s, %s)",
+                           (product_id, location_id, quantity))
+            conn.commit() 
+
+            flash('Produkt został pomyślnie dodany do inwentarza!', 'success')
+            return redirect(url_for('products')) 
+
+        except mysql.connector.Error as err:
+            conn.rollback() 
+            app.logger.error(f"Błąd bazy danych podczas dodawania produktu: {err}")
+           
+            flash('Wystąpił błąd podczas dodawania produktu. Spróbuj ponownie.', 'danger')
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Nieoczekiwany błąd podczas dodawania produktu: {e}")
+            flash('Wystąpił nieoczekiwany błąd. Spróbuj ponownie.', 'danger')
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+    
+    return render_template('add_prod.html', form=form)
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5050, debug=False)
+    app.run(host='0.0.0.0', port=5050, debug=True)

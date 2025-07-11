@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">    <title>WMS</title>
+</head>
+<body>
+<header>
+    <nav>
+        <ul>
+            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+            <li><a href="{{url_for('products')}}">Produkty</a></li>
+            <li><a href="{{url_for('orders')}}">Zamówienia</a></li>
+            <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
+        </ul>
+    </nav>
+</header>
+
+<form method="post" action="{{ url_for('add_prod') }}">
+    {{ form.hidden_tag()}}
+{% with messages = get_flashed_messages(with_categories=True) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+    <p>{{form.name(placeholder="Nazwa przedmiotu")}}</p>
+    <p>{{form.sku(placeholder="SKU")}}</p>
+    <p>{{form.description(placeholder="Opis")}}</p>
+    <p>{{form.location(placeholder="Lokalizacja")}}</p>
+    <p>{{form.quantity(placeholder="Ilosc")}}</p>
+    <p>{{form.submit()}}</p>
+</form>
+
+</body>
+</html>

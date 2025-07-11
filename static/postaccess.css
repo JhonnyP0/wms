@@ -70,3 +70,8 @@ text-align: center;
 {
   list-style-type: none;
 }
+
+form
+{
+  align-self: center;
+}
