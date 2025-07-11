@@ -20,8 +20,7 @@ login_manager.login_view = 'login'
 #database connection
 def db_connect():
     return mysql.connector.connect(
-    host='localhost',
-    #host = os.getenv('DB_HOST'),
+    host = os.getenv('DB_HOST'),
     port = os.getenv('DB_PORT'),
     user = os.getenv('DB_USER'),
     password = os.getenv('DB_PASSWORD'),
