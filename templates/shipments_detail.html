@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>title</title>
+</head>
+<body>
+    <h1>Szczegóły Przesyłki: Test {{ shipment.barcode }}</h1>
+
+    <p>Kompletator: {{ shipment.username }}</p>
+    <p>Data utworzenia: {{ shipment.shipment_date }}</p>
+    <p>Kod Lokalizacji: {{ shipment.location_code }}</p>
+
+    <h2>Produkty w tej Przesyłce</h2>
+    {% if shipment.items %}
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Nazwa Produktu</th>
+                <th>Ilość</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in shipment.items %}
+            <tr>
+                <td>{{ item.product_name }}</td> {# Zmieniono na product_name #}
+                <td>{{ item.quantity }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Brak produktów w tej przesyłce.</p>
+    {% endif %}
+</html>

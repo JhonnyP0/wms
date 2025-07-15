@@ -5,7 +5,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
     <title>WMS</title>
 </head>
-<body>
 <header>
     <nav>
         <ul>
@@ -18,29 +17,43 @@
     </nav>
 </header>
 
-<table>
-  <thead>
-    <tr>
-      <th>Kompletator</th>
-      <th>Data utworzenia</th>
-      <th>Kod kreskowy</th>
-      <th>Przedmioty</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for items in ship_items %}
-    <tr>
-      <td>{{ items.user_id }}</td>
-      <td>{{ items.shipment_date }}</td>
-      <td>{{ items.barcode }}</td>
-      <td>{{ items.status }}</td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="4">Brak pozycji do wyświetlenia</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<body>
+    <h1>Wszystkie Przesyłki</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Kompletator</th>
+                <th>Data utworzenia</th>
+                <th>Kod kreskowy</th>
+                <th>Lokalizacja</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            {% for shipment in ship_items %}
+              <tr data-href="{{ url_for('shipments_detail', barcode=shipment.barcode) }}" style="cursor: pointer;">                
+                <td>{{ shipment.username}}</td>
+                <td>{{ shipment.shipment_date }}</td>
+                <td>{{ shipment.barcode }}</td>
+                <td>{{ shipment.location_code }}</td>
+              </tr>
+              {% endfor %}
+        </tbody>
+    </table>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('tr[data-href]');
+            
+            rows.forEach(row => {
+                row.addEventListener('click', function() {
+                    const targetUrl = this.dataset.href;
+                    if (targetUrl) {
+                        window.location.href = targetUrl;
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

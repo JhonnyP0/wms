@@ -43,6 +43,7 @@ def userload(user_id):
     return None
 
 #dekorator admin_required
+# TODO: to gowno tez trzeba ogarnąć a przede wszsytkim stestować czy działa wgl
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -54,6 +55,8 @@ def admin_required(f):
             return redirect(url_for('dashboard')) 
         return f(*args, **kwargs)
     return decorated_function
+
+#TODO: dodoanie admina spoza bazy (chodzi o to ze z bazy nie mozna wrzucic bezposrednio admina bo hasha nie mozna zrealizowac)
 
 # def admin_push():
 #     conn=db_connect()
@@ -213,7 +216,16 @@ def recivings():
 def shipments():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM shipments")
+    cursor.execute("""
+        SELECT 
+            s.id, 
+            s.username, 
+            s.shipment_date, 
+            s.barcode, 
+            loc.code AS location_code -- Pobieramy kod lokalizacji
+        FROM shipments s
+        JOIN locations loc ON s.location_id = loc.id -- Łączymy z lokalizacjami
+    """)
     shipments=cursor.fetchall()
     cursor.close()
     conn.close()    
@@ -292,6 +304,27 @@ def add_prod():
                 conn.close()
     
     return render_template('add_prod.html', form=form)
+
+# TODO: nie wyswietlają się zmienne
+@app.route('/shipments_detail/<string:barcode>', methods=['GET'])
+def shipments_detail(barcode):
+    conn = db_connect()
+    cursor= conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            s.id, 
+            s.username, 
+            s.shipment_date, 
+            s.barcode, 
+            loc.code AS location_code -- Pobieramy kod lokalizacji
+        FROM shipments s
+        JOIN locations loc ON s.location_id = loc.id -- Łączymy z lokalizacjami
+        WHERE s.barcode = %s
+    """, (barcode,))
+    shipment=cursor.fetchall()
+    return render_template('shipments_detail.html',shipment=shipment)
+
+# TODO: reciva trzeba zrobic podobnie jak shipy (pamietaj o bazie danych !!)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5050, debug=True)

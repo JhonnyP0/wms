@@ -36,12 +36,12 @@ CREATE TABLE IF NOT EXISTS lists (
 
 CREATE TABLE IF NOT EXISTS list_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    list_id INT NOT NULL, 
+    list_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (list_id) REFERENCES lists(id), 
+    FOREIGN KEY (list_id) REFERENCES lists(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (list_id, product_id) 
+    UNIQUE (list_id, product_id)
 );
 
 CREATE TABLE IF NOT EXISTS shipments (
@@ -49,11 +49,19 @@ CREATE TABLE IF NOT EXISTS shipments (
     username VARCHAR(50) NOT NULL,
     shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
-    list_id INT NOT NULL,
-    location_id INT NOT NULL,
+    location_id INT, 
     FOREIGN KEY (username) REFERENCES users(username),
-    FOREIGN KEY (list_id) REFERENCES lists(id),
     FOREIGN KEY (location_id) REFERENCES locations(id)
+);
+
+CREATE TABLE IF NOT EXISTS shipment_products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    shipment_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE, 
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    UNIQUE (shipment_id, product_id) 
 );
 
 CREATE TABLE IF NOT EXISTS receivings (
@@ -61,11 +69,19 @@ CREATE TABLE IF NOT EXISTS receivings (
     username VARCHAR(50) NOT NULL,
     receiving_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
-    list_id INT NOT NULL,
-    location_id INT NOT NULL,
+    location_id INT,
     FOREIGN KEY (username) REFERENCES users(username),
-    FOREIGN KEY (list_id) REFERENCES lists(id),
     FOREIGN KEY (location_id) REFERENCES locations(id)
+);
+
+CREATE TABLE IF NOT EXISTS receiving_products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    receiving_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (receiving_id) REFERENCES receivings(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    UNIQUE (receiving_id, product_id)
 );
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
@@ -197,12 +213,34 @@ INSERT INTO list_items (list_id, product_id, quantity) VALUES
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
-INSERT INTO shipments (username, barcode, list_id, location_id) VALUES
-('tomek', 'SHIP-001-ABC', (SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM locations WHERE code = 'A1-01')),
-('janek', 'SHIP-002-DEF', (SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM locations WHERE code = 'A1-02')),
-('ania', 'SHIP-003-GHI', (SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM locations WHERE code = 'A1-03'));
 
-INSERT INTO receivings (username, barcode, list_id, location_id) VALUES
-('zofia', 'REC-001-PQR', (SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM locations WHERE code = 'C1-01')),
-('tomek', 'REC-002-STU', (SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM locations WHERE code = 'C1-02')),
-('piotr', 'REC-003-VWX', (SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM locations WHERE code = 'C1-03'));
+-- Wstawianie danych do shipments (bez list_id i location_id, jeśli nie są główne)
+INSERT INTO shipments (username, barcode, location_id) VALUES
+('tomek', 'SHIP-001-ABC', (SELECT id FROM locations WHERE code = 'A1-01')),
+('janek', 'SHIP-002-DEF', (SELECT id FROM locations WHERE code = 'A1-02')),
+('ania', 'SHIP-003-GHI', (SELECT id FROM locations WHERE code = 'A1-03'));
+
+-- Wstawianie danych do nowej tabeli shipment_products
+INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
+((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM shipments WHERE barcode = 'SHIP-002-DEF'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM shipments WHERE barcode = 'SHIP-002-DEF'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+
+
+-- Wstawianie danych do receivings (bez list_id i location_id, jeśli nie są główne)
+INSERT INTO receivings (username, barcode, location_id) VALUES
+('zofia', 'REC-001-PQR', (SELECT id FROM locations WHERE code = 'C1-01')),
+('tomek', 'REC-002-STU', (SELECT id FROM locations WHERE code = 'C1-02')),
+('piotr', 'REC-003-VWX', (SELECT id FROM locations WHERE code = 'C1-03'));
+
+-- Wstawianie danych do nowej tabeli receiving_products
+INSERT INTO receiving_products (receiving_id, product_id, quantity) VALUES
+((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM receivings WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM receivings WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM receivings WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM receivings WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
