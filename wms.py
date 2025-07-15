@@ -203,16 +203,21 @@ def products():
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/orders', methods=['GET'])
+@app.route('/recivings', methods=["GET","POST"])
 @login_required
-def orders():
+def recivings():
+    return render_template('recivings.html')
+
+@app.route('/shipments', methods=['GET'])
+@login_required
+def shipments():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM orders")
-    orders=cursor.fetchall()
+    cursor.execute("SELECT * FROM shipments")
+    shipments=cursor.fetchall()
     cursor.close()
     conn.close()    
-    return render_template('orders.html',orders=orders)
+    return render_template('shipments.html',ship_items=shipments)
 
 @app.route('/add_prod', methods=['GET','POST'])
 @login_required

@@ -14,34 +14,30 @@
             <li><a href="{{url_for('recivings')}}">Przyjęcia</a></li>
             <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
-            <li><a href="{{url_for('add_prod')}}">Dodaj produkt</a></li>
         </ul>
     </nav>
 </header>
+
 <table>
   <thead>
     <tr>
-      <th>ID Inwentarza</th>
-      <th>Nazwa Produktu</th>
-      <th>SKU</th>
-      <th>Opis</th>
-      <th>Lokalizacja</th>
-      <th>Ilość</th>
+      <th>Kompletator</th>
+      <th>Data utworzenia</th>
+      <th>Kod kreskowy</th>
+      <th>Przedmioty</th>
     </tr>
   </thead>
   <tbody>
-      {% for item in prods %}
-      <tr>
-          <td>{{ item.inventory_id }}</td>
-          <td>{{ item.product_name }}</td>
-          <td>{{ item.sku }}</td>
-          <td>{{ item.description }}</td>
-          <td>{{ item.location_code }}</td>
-          <td>{{ item.quantity }}</td>
-      </tr>
+    {% for items in recive_items %}
+    <tr>
+      <td>{{ items.user_id }}</td>
+      <td>{{ items.shipment_date }}</td>
+      <td>{{ items.barcode }}</td>
+      <td>{{ items.status }}</td>
+    </tr>
     {% else %}
     <tr>
-      <td colspan="6">Brak produktów do wyświetlenia.</td>
+      <td colspan="4">Brak pozycji do wyświetlenia</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -28,21 +28,44 @@ CREATE TABLE IF NOT EXISTS inventory (
     UNIQUE (product_id, location_id)
 );
 
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS lists (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('pending', 'shipped', 'cancelled') DEFAULT 'pending',
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    list_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
 );
 
-CREATE TABLE IF NOT EXISTS order_items (
+CREATE TABLE IF NOT EXISTS list_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
+    list_id INT NOT NULL, 
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    FOREIGN KEY (list_id) REFERENCES lists(id), 
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    UNIQUE (list_id, product_id) 
+);
+
+CREATE TABLE IF NOT EXISTS shipments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    barcode VARCHAR(255) NOT NULL UNIQUE,
+    list_id INT NOT NULL,
+    location_id INT NOT NULL,
+    FOREIGN KEY (username) REFERENCES users(username),
+    FOREIGN KEY (list_id) REFERENCES lists(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id)
+);
+
+CREATE TABLE IF NOT EXISTS receivings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    receiving_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    barcode VARCHAR(255) NOT NULL UNIQUE,
+    list_id INT NOT NULL,
+    location_id INT NOT NULL,
+    FOREIGN KEY (username) REFERENCES users(username),
+    FOREIGN KEY (list_id) REFERENCES lists(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
@@ -100,7 +123,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (13, (SELECT id FROM locations WHERE code = 'A1-05'), 200),
 (6, (SELECT id FROM locations WHERE code = 'A1-06'), 40),
 (8, (SELECT id FROM locations WHERE code = 'A1-06'), 100),
-
 (7, (SELECT id FROM locations WHERE code = 'A2-01'), 20),
 (15, (SELECT id FROM locations WHERE code = 'A2-01'), 8),
 (9, (SELECT id FROM locations WHERE code = 'A2-02'), 90),
@@ -113,7 +135,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (7, (SELECT id FROM locations WHERE code = 'A2-05'), 10),
 (6, (SELECT id FROM locations WHERE code = 'A2-06'), 50),
 (9, (SELECT id FROM locations WHERE code = 'A2-06'), 40),
-
 (14, (SELECT id FROM locations WHERE code = 'B1-01'), 50),
 (17, (SELECT id FROM locations WHERE code = 'B1-01'), 25),
 (20, (SELECT id FROM locations WHERE code = 'B1-02'), 1),
@@ -126,7 +147,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (12, (SELECT id FROM locations WHERE code = 'B1-05'), 5),
 (13, (SELECT id FROM locations WHERE code = 'B1-06'), 100),
 (16, (SELECT id FROM locations WHERE code = 'B1-06'), 30),
-
 (14, (SELECT id FROM locations WHERE code = 'B2-01'), 25),
 (15, (SELECT id FROM locations WHERE code = 'B2-01'), 3),
 (17, (SELECT id FROM locations WHERE code = 'B2-02'), 15),
@@ -139,7 +159,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'B2-05'), 2),
 (25, (SELECT id FROM locations WHERE code = 'B2-06'), 10),
 (1, (SELECT id FROM locations WHERE code = 'B2-06'), 5),
-
 (2, (SELECT id FROM locations WHERE code = 'C1-01'), 50),
 (3, (SELECT id FROM locations WHERE code = 'C1-01'), 20),
 (4, (SELECT id FROM locations WHERE code = 'C1-02'), 30),
@@ -152,7 +171,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (11, (SELECT id FROM locations WHERE code = 'C1-05'), 10),
 (12, (SELECT id FROM locations WHERE code = 'C1-06'), 8),
 (13, (SELECT id FROM locations WHERE code = 'C1-06'), 70),
-
 (14, (SELECT id FROM locations WHERE code = 'C2-01'), 15),
 (15, (SELECT id FROM locations WHERE code = 'C2-01'), 2),
 (16, (SELECT id FROM locations WHERE code = 'C2-02'), 20),
@@ -166,46 +184,25 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'C2-06'), 3),
 (25, (SELECT id FROM locations WHERE code = 'C2-06'), 20);
 
--- Wstawianie danych do tabeli orders
-INSERT INTO orders (user_id, status) VALUES
-(1, 'pending'),
-(2, 'shipped'),
-(3, 'cancelled'),
-(1, 'shipped'),
-(4, 'pending'),
-(5, 'pending'),
-(2, 'cancelled'),
-(3, 'shipped'),
-(4, 'shipped'),
-(5, 'pending');
+INSERT INTO lists (list_name, description) VALUES
+('Standardowa Wysylka A', 'Lista produktów do standardowej wysyłki A'),
+('Materiały Biurowe', 'Lista materiałów biurowych do przyjęcia'),
+('Narzędzia Elektryczne', 'Lista narzędzi do wysyłki');
 
--- Wstawianie danych do tabeli order_items
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(1, 1, 2), (1, 3, 5), (1, 5, 1);
+INSERT INTO list_items (list_id, product_id, quantity) VALUES
+((SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(2, 2, 10), (2, 4, 3);
+INSERT INTO shipments (username, barcode, list_id, location_id) VALUES
+('tomek', 'SHIP-001-ABC', (SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM locations WHERE code = 'A1-01')),
+('janek', 'SHIP-002-DEF', (SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM locations WHERE code = 'A1-02')),
+('ania', 'SHIP-003-GHI', (SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM locations WHERE code = 'A1-03'));
 
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(3, 6, 7), (3, 7, 2), (3, 10, 4);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(4, 11, 1), (4, 12, 1), (4, 14, 10);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(5, 18, 1), (5, 19, 1), (5, 20, 1);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(6, 21, 1), (6, 22, 5), (6, 23, 1);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(7, 1, 5), (7, 8, 20);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(8, 10, 50), (8, 13, 100);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(9, 2, 5), (9, 15, 2);
-
-INSERT INTO order_items (order_id, product_id, quantity) VALUES
-(10, 16, 10), (10, 24, 1);
+INSERT INTO receivings (username, barcode, list_id, location_id) VALUES
+('zofia', 'REC-001-PQR', (SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM locations WHERE code = 'C1-01')),
+('tomek', 'REC-002-STU', (SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM locations WHERE code = 'C1-02')),
+('piotr', 'REC-003-VWX', (SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM locations WHERE code = 'C1-03'));
