@@ -14,7 +14,7 @@
         <ul>
             <li><a href="{{url_for('dashboard')}}">Panel</a></li>
             <li><a href="{{url_for('products')}}">Produkty</a></li>
-            <li><a href="{{url_for('recivings')}}">Przyjęcia</a></li>
+            <li><a href="{{url_for('receivings')}}">Przyjęcia</a></li>
             <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
         </ul>
@@ -50,7 +50,7 @@
         { name: "C1", coords: [[340, 250], [420, 370]] },
         { name: "C2", coords: [[340, 430], [420, 550]] },
     ];
-
+    const image = L.imageOverlay("{{ url_for('static', filename='warehouse.png') }}", bounds).addTo(map);
     regaly.forEach(r => {
         L.rectangle(r.coords, { color: "rgb(252, 193, 0)", weight: 2, fillOpacity: 0.5 })
             .addTo(map)

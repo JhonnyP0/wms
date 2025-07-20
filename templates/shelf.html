@@ -14,7 +14,7 @@
         <ul>
             <li><a href="{{url_for('dashboard')}}">Panel</a></li>
             <li><a href="{{url_for('products')}}">Produkty</a></li>
-            <li><a href="{{url_for('recivings')}}">Przyjęcia</a></li>
+            <li><a href="{{url_for('receivings')}}">Przyjęcia</a></li>
             <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
         </ul>
@@ -45,15 +45,15 @@
     const polki = [
         { name: "01", coords: [[100, 250], [180, 370]] },
         { name: "02", coords: [[100, 430], [180, 550]] },
-        { name: "03", coords: [[220, 250], [300, 370]] },
-        { name: "04", coords: [[220, 430], [300, 550]] },
-        { name: "05", coords: [[340, 250], [420, 370]] },
-        { name: "06", coords: [[340, 430], [420, 550]] },
+        { name: "03", coords: [[290, 250], [360, 370]] },
+        { name: "04", coords: [[290, 430], [360, 550]] },
+        { name: "05", coords: [[480, 250], [560, 370]] },
+        { name: "06", coords: [[480, 430], [560, 550]] },
     ];
 
     // Pobierz kod nadrzędnego regału z szablonu Jinja
     const parentRegalCode = "{{ reg_code }}"; 
-
+ const image = L.imageOverlay("{{ url_for('static', filename='shelf.png') }}", bounds).addTo(map);
     polki.forEach(r => {
 
         const fullPolkaCode = `${parentRegalCode}-${r.name}`;

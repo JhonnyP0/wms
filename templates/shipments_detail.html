@@ -2,34 +2,40 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>title</title>
+    <title>Szczegóły Przesyłki</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
+<header>
+    <nav>
+        <ul>
+            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+            <li><a href="{{url_for('products')}}">Produkty</a></li>
+            <li><a href="{{url_for('receivings')}}">Przyjęcia</a></li>
+            <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
+            <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
+        </ul>
+    </nav>
+</header>
 <body>
-    <h1>Szczegóły Przesyłki: Test {{ shipment.barcode }}</h1>
-
-    <p>Kompletator: {{ shipment.username }}</p>
-    <p>Data utworzenia: {{ shipment.shipment_date }}</p>
-    <p>Kod Lokalizacji: {{ shipment.location_code }}</p>
-
-    <h2>Produkty w tej Przesyłce</h2>
-    {% if shipment.items %}
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Nazwa Produktu</th>
-                <th>Ilość</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in shipment.items %}
-            <tr>
-                <td>{{ item.product_name }}</td> {# Zmieniono na product_name #}
-                <td>{{ item.quantity }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h1>Szczegóły Przesyłki: {{ barcode }}</h1> {% if shipment_products %} <table>
+            <thead>
+                <tr>
+                    <th>Nazwa Przedmiotu</th>
+                    <th>SKU</th> <th>Wysłana Ilość</th> <th>Opis</th> </tr>
+            </thead>
+            <tbody>
+                {% for item in shipment_products %} <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.sku }}</td>
+                        <td>{{ item.shipped_quantity }}</td> <td>{{ item.description }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
-    <p>Brak produktów w tej przesyłce.</p>
+        <p>Brak przedmiotów w tej przesyłce.</p>
     {% endif %}
+
+    <a href="{{ url_for('shipments') }}" class="back-link">Powrót do listy przesyłek</a>
+</body>
 </html>

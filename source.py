@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, EmailField, SubmitField, IntegerField
-from wtforms.validators import InputRequired,Length, EqualTo
+from wtforms import StringField, PasswordField, EmailField, SubmitField, IntegerField,FieldList, FormField
+from wtforms.validators import InputRequired,Length, EqualTo, NumberRange,DataRequired
 from flask_login import UserMixin
 from functools import wraps
 class User(UserMixin):
@@ -28,3 +28,18 @@ class AddProdForm(FlaskForm):
     location=StringField('Location',validators=[InputRequired()])
     quantity=IntegerField('Quantity', validators=[InputRequired()])
     submit=SubmitField('Dodaj')
+
+class ShipmentProductForm(FlaskForm):
+    product_sku = StringField('SKU Produktu', validators=[InputRequired(), Length(min=1, max=50)])
+    quantity = IntegerField('Ilość', validators=[InputRequired(), NumberRange(min=1)])
+    class Meta:
+        csrf = False # WAŻNA ZMIANA: Wyłączamy walidację CSRF dla tego pod-formularza
+
+
+# Główny formularz dodawania wysyłki
+class AddShipmentForm(FlaskForm):
+    barcode = StringField('Kod kreskowy wysyłki', validators=[DataRequired(), Length(min=1, max=255)])
+    # Przywrócone pole lokalizacji docelowej
+    location_code = StringField('Kod lokalizacji docelowej', validators=[DataRequired(), Length(min=1, max=10)])
+    products = FieldList(FormField(ShipmentProductForm), min_entries=1, max_entries=20)
+    submit = SubmitField('Dodaj Wysyłkę')

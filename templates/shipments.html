@@ -10,9 +10,10 @@
         <ul>
             <li><a href="{{url_for('dashboard')}}">Panel</a></li>
             <li><a href="{{url_for('products')}}">Produkty</a></li>
-            <li><a href="{{url_for('recivings')}}">Przyjęcia</a></li>
+            <li><a href="{{url_for('receivings')}}">Przyjęcia</a></li>
             <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
+            <li><a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a></li>
         </ul>
     </nav>
 </header>
@@ -25,8 +26,7 @@
                 <th>Kompletator</th>
                 <th>Data utworzenia</th>
                 <th>Kod kreskowy</th>
-                <th>Lokalizacja</th>
-
+                <th>Lokalizacja</th> 
             </tr>
         </thead>
         <tbody>
@@ -35,13 +35,12 @@
                 <td>{{ shipment.username}}</td>
                 <td>{{ shipment.shipment_date }}</td>
                 <td>{{ shipment.barcode }}</td>
-                <td>{{ shipment.location_code }}</td>
-              </tr>
+                <td>{{ shipment.location_code }}</td> </tr>
               {% endfor %}
         </tbody>
     </table>
 
-        <script>
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('tr[data-href]');
             
@@ -55,5 +54,5 @@
             });
         });
     </script>
-</body>
+    </body>
 </html>

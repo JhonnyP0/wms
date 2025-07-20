@@ -28,12 +28,15 @@ CREATE TABLE IF NOT EXISTS inventory (
     UNIQUE (product_id, location_id)
 );
 
+-- Ta tabela 'lists' reprezentuje Twoje "zamówienia" lub "listy"
 CREATE TABLE IF NOT EXISTS lists (
     id INT AUTO_INCREMENT PRIMARY KEY,
     list_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT
 );
 
+-- Ta tabela 'list_items' jest prawidłową tabelą połączeniową, która łączy 'lists' z 'products'
+-- i przechowuje ilość dla każdego produktu w danej liście.
 CREATE TABLE IF NOT EXISTS list_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     list_id INT NOT NULL,
@@ -41,15 +44,16 @@ CREATE TABLE IF NOT EXISTS list_items (
     quantity INT NOT NULL,
     FOREIGN KEY (list_id) REFERENCES lists(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (list_id, product_id)
+    UNIQUE (list_id, product_id) -- Zapewnia, że dany produkt pojawia się tylko raz na liście
 );
 
+-- Tabele shipments i shipment_products są dobrze zaprojektowane
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
-    location_id INT, 
+    location_id INT,
     FOREIGN KEY (username) REFERENCES users(username),
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
@@ -59,11 +63,12 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     shipment_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE, 
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (shipment_id, product_id) 
+    UNIQUE (shipment_id, product_id)
 );
 
+-- Tabele receivings i receiving_products są dobrze zaprojektowane
 CREATE TABLE IF NOT EXISTS receivings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
@@ -79,10 +84,14 @@ CREATE TABLE IF NOT EXISTS receiving_products (
     receiving_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (receiving_id) REFERENCES receivings(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiving_id) REFERENCES receivings(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
     UNIQUE (receiving_id, product_id)
 );
+
+
+-- Dane użytkowników, produktów, lokalizacji i inwentarza pozostają bez zmian,
+-- ponieważ są prawidłowo zaimplementowane.
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
