@@ -435,7 +435,6 @@ def receivings_detail(barcode):
 
     return render_template('receivigns_detail.html', shipment_products=shipment_products, barcode=barcode)
 
-
 @app.route('/add_shipment', methods=['GET', 'POST'])
 @login_required
 def add_shipment():
@@ -445,7 +444,7 @@ def add_shipment():
     if form.validate_on_submit():
         print("Formularz ZWALIDOWANY pomyślnie.", flush=True)
         shipment_barcode = form.barcode.data
-        # location_code ZOSTAŁO USUNIĘTE Z POBIERANIA DANYCH FORMULARZA
+        # location_code usunięte z formularza AddShipmentForm
         username = current_user.username
 
         conn = db_connect()
@@ -457,10 +456,8 @@ def add_shipment():
         cursor = conn.cursor()
 
         try:
-            # Komunikat diagnostyczny zaktualizowany
             print(f"Próba dodania wysyłki z kodem: {shipment_barcode}, użytkownik: {username}", flush=True)
 
-            # 1. Sprawdź, czy kod kreskowy wysyłki już istnieje
             cursor.execute("SELECT id FROM shipments WHERE barcode = %s", (shipment_barcode,))
             existing_shipment = cursor.fetchone()
             if existing_shipment:
@@ -468,14 +465,11 @@ def add_shipment():
                 flash(f'Wysyłka o kodzie kreskowym "{shipment_barcode}" już istnieje.', 'warning')
                 return render_template('add_shipment.html', form=form)
 
-            # 2. Logika pobierania ID lokalizacji docelowej lub tworzenia nowej ZOSTAŁA USUNIĘTA
-            # Ponieważ shipment sam w sobie nie ma już location_id
-
-            # 3. Dodaj nową wysyłkę do tabeli 'shipments'
+            # Usunięto logikę związaną z location_id dla tabeli shipments
+            # INSERT do shipments bez location_id
             print("Wstawianie do tabeli 'shipments'...", flush=True)
-            # Zapytanie INSERT ZMIENIONE - bez location_id
             cursor.execute(
-                "INSERT INTO shipments (username, barcode) VALUES (%s, %s)", # Usunięto location_id
+                "INSERT INTO shipments (username, barcode) VALUES (%s, %s)",
                 (username, shipment_barcode)
             )
             conn.commit()
@@ -487,7 +481,6 @@ def add_shipment():
                 flash('Nie udało się dodać nowej wysyłki.', 'danger')
                 return render_template('add_shipment.html', form=form)
 
-            # 4. Dodaj produkty do tabeli 'shipment_products' ORAZ zaktualizuj inwentarz
             products_added = 0
             if not form.products.entries:
                 print("Brak produktów w formularzu FieldList.", flush=True)
@@ -503,40 +496,55 @@ def add_shipment():
                 if not product_data:
                     flash(f'Ostrzeżenie: Produkt o SKU "{product_sku}" nie istnieje. Nie dodano do wysyłki ani nie zaktualizowano inwentarza.', 'warning')
                     print(f"OSTRZEŻENIE: Produkt o SKU '{product_sku}' nie istnieje. Pomijanie.", flush=True)
-                    continue 
+                    continue
 
                 product_id = product_data[0]
                 print(f"Znaleziono Product ID: {product_id} dla SKU: {product_sku}", flush=True)
 
-                # *** LOGIKA AKTUALIZACJI INWENTARZA POZOSTAJE BEZ ZMIAN DLA INVENTORY! ***
-                # inventory.location_id jest nadal kluczowe dla stanu magazynowego!
-                # Pobierz aktualną ilość z inwentarza dla tego produktu
-                # Założenie: pobieramy z pierwszej znalezionej lokalizacji w inventory
-                cursor.execute("SELECT quantity, id FROM inventory WHERE product_id = %s LIMIT 1", (product_id,))
-                inventory_item = cursor.fetchone()
+                # --- NOWA LOGIKA DLA WIELU LOKALIZACJI ---
 
-                if not inventory_item:
-                    flash(f'BŁĄD: Produkt o SKU "{product_sku}" nie znaleziono w inwentarzu. Wysyłka niemożliwa.', 'danger')
-                    print(f"BŁĄD: Produkt {product_sku} (ID: {product_id}) nie znaleziono w inwentarzu.", flush=True)
-                    conn.rollback() 
-                    return render_template('add_shipment.html', form=form)
-                
-                current_stock = inventory_item[0]
-                inventory_id = inventory_item[1]
+                # 1. Sprawdź całkowitą dostępną ilość dla tego produktu we wszystkich lokalizacjach
+                cursor.execute("SELECT SUM(quantity) FROM inventory WHERE product_id = %s", (product_id,))
+                total_available_stock_data = cursor.fetchone()
+                # Upewnij się, że total_available_stock_data[0] nie jest None, jeśli SUM nie zwróciło wyników
+                total_available_stock = total_available_stock_data[0] if total_available_stock_data and total_available_stock_data[0] is not None else 0
 
-                if current_stock < quantity_to_ship:
-                    flash(f'BŁĄD: Niewystarczająca ilość dla produktu "{product_sku}". Dostępne: {current_stock}, wymagane: {quantity_to_ship}. Wysyłka niemożliwa.', 'danger')
-                    print(f"BŁĄD: Niewystarczająca ilość dla {product_sku}. Dostępne: {current_stock}, wymagane: {quantity_to_ship}.", flush=True)
+                print(f"Całkowita dostępna ilość dla {product_sku}: {total_available_stock}", flush=True)
+
+                if total_available_stock < quantity_to_ship:
+                    flash(f'BŁĄD: Niewystarczająca ilość dla produktu "{product_sku}". Dostępne: {total_available_stock}, wymagane: {quantity_to_ship}. Wysyłka niemożliwa.', 'danger')
+                    print(f"BŁĄD: Niewystarczająca ilość dla {product_sku}. Dostępne: {total_available_stock}, wymagane: {quantity_to_ship}.", flush=True)
                     conn.rollback()
                     return render_template('add_shipment.html', form=form)
 
-                new_stock = current_stock - quantity_to_ship
-                cursor.execute("UPDATE inventory SET quantity = %s WHERE id = %s", (new_stock, inventory_id))
-                print(f"Zaktualizowano inwentarz dla {product_sku}: {current_stock} -> {new_stock}", flush=True)
+                # 2. Jeśli jest wystarczająca ilość, odejmij ją z lokalizacji, zaczynając od tych, gdzie jest towar.
+                # Sortujemy lokalizacje, aby zawsze odejmować w przewidywalnej kolejności (np. od najmniejszej ilości lub największej)
+                cursor.execute("SELECT id, quantity FROM inventory WHERE product_id = %s AND quantity > 0 ORDER BY id ASC", (product_id,))
+                inventory_items_for_product = cursor.fetchall()
+
+                remaining_to_ship = quantity_to_ship
+                for inventory_item_id, current_location_stock in inventory_items_for_product:
+                    if remaining_to_ship == 0:
+                        break # Wszystko już wysłane
+
+                    if current_location_stock >= remaining_to_ship:
+                        # Ta lokalizacja wystarczy na resztę wysyłki
+                        new_stock_in_location = current_location_stock - remaining_to_ship
+                        cursor.execute("UPDATE inventory SET quantity = %s WHERE id = %s", (new_stock_in_location, inventory_item_id))
+                        print(f"Odebrano {remaining_to_ship} sztuk z inventory_id {inventory_item_id}. Nowa ilość: {new_stock_in_location}", flush=True)
+                        remaining_to_ship = 0
+                    else:
+                        # Ta lokalizacja nie wystarczy, zabieramy wszystko co jest
+                        quantity_from_this_location = current_location_stock
+                        cursor.execute("UPDATE inventory SET quantity = 0 WHERE id = %s", (inventory_item_id,))
+                        remaining_to_ship -= quantity_from_this_location
+                        print(f"Odebrano {quantity_from_this_location} sztuk z inventory_id {inventory_item_id}. Nowa ilość: 0. Pozostało do wysłania: {remaining_to_ship}", flush=True)
+
+                # --- KONIEC NOWEJ LOGIKI ---
 
                 cursor.execute(
                     "INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES (%s, %s, %s)",
-                    (shipment_id, product_id, quantity_to_ship)
+                    (shipment_id, product_id, quantity_to_ship) # Dodajemy oryginalną, całkowitą ilość do shipment_products
                 )
                 products_added += 1
 
