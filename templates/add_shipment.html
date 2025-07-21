@@ -32,7 +32,7 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('add_shipment') }}">
+       <form method="POST" action="{{ url_for('add_shipment') }}">
             {{ form.csrf_token }}
 
             <div class="form-group">
@@ -41,18 +41,6 @@
                 {% if form.barcode.errors %}
                     <ul class="errors">
                         {% for error in form.barcode.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            </div>
-
-            <div class="form-group">
-                {{ form.location_code.label }}
-                {{ form.location_code(class="form-control") }}
-                {% if form.location_code.errors %}
-                    <ul class="errors">
-                        {% for error in form.location_code.errors %}
                             <li>{{ error }}</li>
                         {% endfor %}
                     </ul>

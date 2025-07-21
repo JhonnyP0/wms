@@ -30,16 +30,15 @@ class AddProdForm(FlaskForm):
     submit=SubmitField('Dodaj')
 
 class ShipmentProductForm(FlaskForm):
-    product_sku = StringField('SKU Produktu', validators=[InputRequired(), Length(min=1, max=50)])
-    quantity = IntegerField('Ilość', validators=[InputRequired(), NumberRange(min=1)])
-    class Meta:
-        csrf = False # WAŻNA ZMIANA: Wyłączamy walidację CSRF dla tego pod-formularza
+    product_sku = StringField('SKU Produktu', validators=[DataRequired(), Length(min=1, max=50)])
+    quantity = IntegerField('Ilość', validators=[DataRequired(), NumberRange(min=1)])
 
+    class Meta:
+        csrf = False
 
 # Główny formularz dodawania wysyłki
 class AddShipmentForm(FlaskForm):
     barcode = StringField('Kod kreskowy wysyłki', validators=[DataRequired(), Length(min=1, max=255)])
-    # Przywrócone pole lokalizacji docelowej
-    location_code = StringField('Kod lokalizacji docelowej', validators=[DataRequired(), Length(min=1, max=10)])
+    # Pole location_code ZOSTAŁO USUNIĘTE
     products = FieldList(FormField(ShipmentProductForm), min_entries=1, max_entries=20)
     submit = SubmitField('Dodaj Wysyłkę')

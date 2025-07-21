@@ -17,34 +17,17 @@
     </nav>
 </header>
 <body>
-    <h1>Szczegóły Przesyłki: {{ barcode }}</h1>
-    {% if shipment_products %}
-        <table>
+    <h1>Szczegóły Przesyłki: {{ barcode }}</h1> {% if shipment_products %} <table>
             <thead>
                 <tr>
                     <th>Nazwa Przedmiotu</th>
-                    <th>SKU</th>
-                    <th>Wysłana Ilość</th>
-                    <th>Opis</th>
-                    <th>Aktualna Lokalizacja</th> {# NOWA KOLUMNA #}
-                </tr>
+                    <th>SKU</th> <th>Wysłana Ilość</th> <th>Opis</th> </tr>
             </thead>
             <tbody>
-                {% for item in shipment_products %}
-                    <tr>
+                {% for item in shipment_products %} <tr>
                         <td>{{ item.product_name }}</td>
                         <td>{{ item.sku }}</td>
-                        <td>{{ item.shipped_quantity }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>
-                            {% if item.location_codes %} {# Sprawdzamy, czy są lokalizacje #}
-                                {% for location in item.location_codes %}
-                                    {{ location }}<br> {# Wyświetlamy każdą lokalizację w nowej linii #}
-                                {% endfor %}
-                            {% else %}
-                                Brak danych o lokalizacji
-                            {% endif %}
-                        </td>
+                        <td>{{ item.shipped_quantity }}</td> <td>{{ item.description }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

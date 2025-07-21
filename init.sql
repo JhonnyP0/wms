@@ -1,3 +1,18 @@
+-- Usuń istniejące tabele w poprawnej kolejności, jeśli już istnieją i chcesz je zresetować
+-- UWAGA: To usunie WSZYSTKIE istniejące dane!
+DROP TABLE IF EXISTS receiving_products;
+DROP TABLE IF EXISTS receivings;
+DROP TABLE IF EXISTS shipment_products;
+DROP TABLE IF EXISTS shipments;
+DROP TABLE IF EXISTS list_items;
+DROP TABLE IF EXISTS lists;
+DROP TABLE IF EXISTS inventory;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS users;
+
+-- Definicje tabel
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -18,25 +33,23 @@ CREATE TABLE IF NOT EXISTS locations (
     code VARCHAR(10) NOT NULL UNIQUE
 );
 
+-- Zmiana w tabeli inventory: dodano location_id dla śledzenia produktu w wielu miejscach
 CREATE TABLE IF NOT EXISTS inventory (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
-    location_id INT NOT NULL,
+    location_id INT NOT NULL, -- Dodana kolumna location_id
     quantity INT NOT NULL DEFAULT 0,
     FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id),
-    UNIQUE (product_id, location_id)
+    FOREIGN KEY (location_id) REFERENCES locations(id), -- Klucz obcy do locations
+    UNIQUE (product_id, location_id) -- Unikalność na parze (produkt, lokalizacja)
 );
 
--- Ta tabela 'lists' reprezentuje Twoje "zamówienia" lub "listy"
 CREATE TABLE IF NOT EXISTS lists (
     id INT AUTO_INCREMENT PRIMARY KEY,
     list_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT
 );
 
--- Ta tabela 'list_items' jest prawidłową tabelą połączeniową, która łączy 'lists' z 'products'
--- i przechowuje ilość dla każdego produktu w danej liście.
 CREATE TABLE IF NOT EXISTS list_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     list_id INT NOT NULL,
@@ -44,18 +57,17 @@ CREATE TABLE IF NOT EXISTS list_items (
     quantity INT NOT NULL,
     FOREIGN KEY (list_id) REFERENCES lists(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (list_id, product_id) -- Zapewnia, że dany produkt pojawia się tylko raz na liście
+    UNIQUE (list_id, product_id)
 );
 
--- Tabele shipments i shipment_products są dobrze zaprojektowane
+-- Zmiana w tabeli shipments: usunięto location_id
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
-    location_id INT,
-    FOREIGN KEY (username) REFERENCES users(username),
-    FOREIGN KEY (location_id) REFERENCES locations(id)
+    FOREIGN KEY (username) REFERENCES users(username)
+    -- FOREIGN KEY (location_id) i kolumna location_id ZOSTAŁY USUNIĘTE
 );
 
 CREATE TABLE IF NOT EXISTS shipment_products (
@@ -68,15 +80,14 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     UNIQUE (shipment_id, product_id)
 );
 
--- Tabele receivings i receiving_products są dobrze zaprojektowane
+-- Zmiana w tabeli receivings: usunięto location_id
 CREATE TABLE IF NOT EXISTS receivings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     receiving_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
-    location_id INT,
-    FOREIGN KEY (username) REFERENCES users(username),
-    FOREIGN KEY (location_id) REFERENCES locations(id)
+    FOREIGN KEY (username) REFERENCES users(username)
+    -- FOREIGN KEY (location_id) i kolumna location_id ZOSTAŁY USUNIĘTE
 );
 
 CREATE TABLE IF NOT EXISTS receiving_products (
@@ -89,9 +100,7 @@ CREATE TABLE IF NOT EXISTS receiving_products (
     UNIQUE (receiving_id, product_id)
 );
 
-
--- Dane użytkowników, produktów, lokalizacji i inwentarza pozostają bez zmian,
--- ponieważ są prawidłowo zaimplementowane.
+-- Dane początkowe (zaktualizowane o brak location_id w shipments i receivings)
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
@@ -135,6 +144,7 @@ INSERT INTO locations (code) VALUES
 ('C1-01'), ('C1-02'), ('C1-03'), ('C1-04'), ('C1-05'), ('C1-06'),
 ('C2-01'), ('C2-02'), ('C2-03'), ('C2-04'), ('C2-05'), ('C2-06');
 
+-- Dane dla inventory, teraz z location_id, co zgadza się z danymi, które podałeś
 INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (1, (SELECT id FROM locations WHERE code = 'A1-01'), 30),
 (11, (SELECT id FROM locations WHERE code = 'A1-01'), 15),
@@ -222,14 +232,12 @@ INSERT INTO list_items (list_id, product_id, quantity) VALUES
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
+-- Zmiana w INSERTach dla shipments: usunięto location_id
+INSERT INTO shipments (username, barcode) VALUES
+('tomek', 'SHIP-001-ABC'),
+('janek', 'SHIP-002-DEF'),
+('ania', 'SHIP-003-GHI');
 
--- Wstawianie danych do shipments (bez list_id i location_id, jeśli nie są główne)
-INSERT INTO shipments (username, barcode, location_id) VALUES
-('tomek', 'SHIP-001-ABC', (SELECT id FROM locations WHERE code = 'A1-01')),
-('janek', 'SHIP-002-DEF', (SELECT id FROM locations WHERE code = 'A1-02')),
-('ania', 'SHIP-003-GHI', (SELECT id FROM locations WHERE code = 'A1-03'));
-
--- Wstawianie danych do nowej tabeli shipment_products
 INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
@@ -238,14 +246,12 @@ INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
+-- Zmiana w INSERTach dla receivings: usunięto location_id
+INSERT INTO receivings (username, barcode) VALUES
+('zofia', 'REC-001-PQR'),
+('tomek', 'REC-002-STU'),
+('piotr', 'REC-003-VWX');
 
--- Wstawianie danych do receivings (bez list_id i location_id, jeśli nie są główne)
-INSERT INTO receivings (username, barcode, location_id) VALUES
-('zofia', 'REC-001-PQR', (SELECT id FROM locations WHERE code = 'C1-01')),
-('tomek', 'REC-002-STU', (SELECT id FROM locations WHERE code = 'C1-02')),
-('piotr', 'REC-003-VWX', (SELECT id FROM locations WHERE code = 'C1-03'));
-
--- Wstawianie danych do nowej tabeli receiving_products
 INSERT INTO receiving_products (receiving_id, product_id, quantity) VALUES
 ((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
 ((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
