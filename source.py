@@ -25,8 +25,8 @@ class AddProdForm(FlaskForm):
     sku = StringField ('Sku', validators=[InputRequired()])
     description = StringField('Description')
     #inventory_table
-    location=StringField('Location',validators=[InputRequired()])
-    quantity=IntegerField('Quantity', validators=[InputRequired()])
+    # location=StringField('Location',validators=[InputRequired()])
+    # quantity=IntegerField('Quantity', validators=[InputRequired()])
     submit=SubmitField('Dodaj')
 
 class ShipmentProductForm(FlaskForm):

@@ -245,10 +245,11 @@ def shipments():
     conn.close()    
     return render_template('shipments.html',ship_items=shipments)
 
-@app.route('/add_prod', methods=['GET','POST'])
-@login_required
-@admin_required
-def add_prod():
+# old code saved for possible future development 
+# @app.route('/add_prod', methods=['GET','POST'])
+# @login_required
+# @admin_required
+# def add_prod():
     form = AddProdForm()
 
     if form.validate_on_submit():
@@ -313,6 +314,53 @@ def add_prod():
                 cursor.close()
                 conn.close()
     
+    return render_template('add_prod.html', form=form)
+
+@app.route('/add_prod', methods=['GET','POST'])
+@login_required
+@admin_required
+def add_prod():
+    form = AddProdForm()
+
+    if form.validate_on_submit():
+        name = form.name.data
+        sku = form.sku.data
+        description = form.description.data
+
+        conn = db_connect()
+        if conn is None:
+            flash('Błąd połączenia z bazą danych. Spróbuj ponownie.', 'danger')
+            return render_template('add_prod.html', form=form)
+
+        cursor = conn.cursor()
+
+        try:
+
+            cursor.execute("INSERT INTO products (name, sku, description) VALUES (%s, %s, %s)",
+                           (name, sku, description))
+            conn.commit()
+            product_id = cursor.lastrowid
+
+            if product_id is None:
+                flash('Nie udało się dodać produktu. Wystąpił błąd w bazie danych.', 'danger')
+                return render_template('add_prod.html', form=form)
+
+            flash('Produkt został pomyślnie dodany do katalogu produktów!', 'success')
+            return redirect(url_for('products'))
+
+        except mysql.connector.Error as err:
+            conn.rollback()
+            app.logger.error(f"Błąd bazy danych podczas dodawania produktu: {err}", exc_info=True) #full traceback
+            flash(f'Wystąpił błąd podczas dodawania produktu: {err}. Spróbuj ponownie.', 'danger')
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Nieoczekiwany błąd podczas dodawania produktu: {e}", exc_info=True)
+            flash('Wystąpił nieoczekiwany błąd. Spróbuj ponownie.', 'danger')
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+
     return render_template('add_prod.html', form=form)
 
 @app.route('/shipment_detail/<string:barcode>', methods=['GET'])
@@ -417,7 +465,7 @@ def receives_detail(barcode):
             JOIN
                 products p ON sp.product_id = p.id
             WHERE
-                sp.receives_id = %s; -- POPRAWKA: Zmieniono 'receives_id' na 'receiving_id'
+                sp.receives_id = %s;
         """
         cursor.execute(query, (receive_id,))
         receive_products = cursor.fetchall()

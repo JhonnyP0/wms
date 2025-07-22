@@ -2,7 +2,8 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">    <title>WMS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <title>WMS</title>
 </head>
 <body>
 <header>
@@ -29,8 +30,8 @@
     <p>{{form.name(placeholder="Nazwa przedmiotu")}}</p>
     <p>{{form.sku(placeholder="SKU")}}</p>
     <p>{{form.description(placeholder="Opis")}}</p>
-    <p>{{form.location(placeholder="Lokalizacja")}}</p>
-    <p>{{form.quantity(placeholder="Ilosc")}}</p>
+    {# <p>{{form.location(placeholder="Lokalizacja")}}</p> #}
+    {# <p>{{form.quantity(placeholder="Ilosc")}}</p> #}
     <p>{{form.submit()}}</p>
 </form>
 
