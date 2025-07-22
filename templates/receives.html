@@ -23,7 +23,6 @@
         }
     </style>
 </head>
-<body>
 <header>
     <nav>
         <ul>
@@ -35,40 +34,47 @@
         </ul>
     </nav>
 </header>
-<div class="search-container">
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj po SKU, nazwie, lokalizacji...">
-    </div>
-    <a id="button_00" href="{{url_for('add_prod')}}">Dodaj produkt</a>
-<table id="productsTable"> 
-   <thead>
-    <tr>
-      <th>ID Inwentarza</th>
-      <th>Nazwa Produktu</th>
-      <th>SKU</th>
-      <th>Opis</th>
-      <th>Lokalizacja</th>
-      <th>Ilość</th>
-    </tr>
-  </thead>
-  <tbody>
-      {% for item in prods %}
-      <tr>
-          <td>{{ item.inventory_id }}</td>
-          <td>{{ item.product_name }}</td>
-          <td>{{ item.sku }}</td>
-          <td>{{ item.description }}</td>
-          <td>{{ item.location_code }}</td>
-          <td>{{ item.quantity }}</td>
-      </tr>
-    {% else %}
-    <tr>
-      <td colspan="6">Brak produktów do wyświetlenia.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
 
-<script>
+<body>
+    <h1>Wszystkie Przyjęcia</h1>
+        <div class="search-container">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
+    </div>
+   <a href="{{url_for('add_receive')}}">Dodaj Przyjęcie</a>
+    <table id="productsTable" border="1">
+        <thead>
+            <tr>
+                <th>Kompletator</th>
+                <th>Data utworzenia</th>
+                <th>Kod kreskowy</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for receive in rec_items %}
+              <tr data-href="{{ url_for('receives_detail', barcode=receive.barcode) }}" style="cursor: pointer;">                
+                <td>{{ receive.username}}</td>
+                <td>{{ receive.receives_date }}</td>
+                <td>{{ receive.barcode }}</td>
+              {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('tr[data-href]');
+            
+            rows.forEach(row => {
+                row.addEventListener('click', function() {
+                    const targetUrl = this.dataset.href;
+                    if (targetUrl) {
+                        window.location.href = targetUrl;
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script>
         function filterTable() {
             // Pobierz wartość z pola wyszukiwania i przekonwertuj na małe litery dla łatwiejszego porównania
             let input = document.getElementById("searchInput");
@@ -105,5 +111,5 @@
             }
         }
     </script>
-</body>
+    </body>
 </html>

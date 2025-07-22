@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Dodaj Wysyłkę - WMS</title>
+    <title>Dodaj Przyjęcie - WMS</title> {# Zmieniono tytuł na "Dodaj Przyjęcie" #}
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
 <body>
@@ -19,7 +19,7 @@
     </header>
 
     <div class="container mt-4">
-        <h2>Dodaj Nową Wysyłkę</h2>
+        <h2>Dodaj Nowe Przyjęcie</h2> {# Zmieniono nagłówek na "Dodaj Nowe Przyjęcie" #}
         <hr>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -32,7 +32,8 @@
             {% endif %}
         {% endwith %}
 
-       <form method="POST" action="{{ url_for('add_shipment') }}">
+        {# Akcja formularza jest OK, jeśli prowadzi do add_receive #}
+       <form method="POST" action="{{ url_for('add_receive') }}">
             {{ form.csrf_token }}
 
             <div class="form-group">
@@ -47,8 +48,9 @@
                 {% endif %}
             </div>
 
-            <h3>Produkty do wysyłki:</h3>
+            <h3>Produkty do przyjęcia:</h3> {# Zmieniono tekst #}
             <div id="products-container">
+                {# Pętla dla istniejących (już dodanych) pól produktów #}
                 {% for product_entry in form.products %}
                     <div class="product-entry-group form-group border p-3 mb-2 rounded">
                         <h4>Produkt #{{ loop.index }}</h4>
@@ -74,6 +76,18 @@
                                 </ul>
                             {% endif %}
                         </div>
+                        {# === NOWE POLE DLA LOKALIZACJI === #}
+                        <div class="form-group">
+                            {{ product_entry.form.location.label }}
+                            {{ product_entry.form.location(class="form-control") }}
+                            {% if product_entry.form.location.errors %}
+                                <ul class="errors">
+                                    {% for error in product_entry.form.location.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
                         <button type="button" class="btn btn-danger btn-sm remove-product-btn">Usuń produkt</button>
                     </div>
                 {% endfor %}
@@ -92,7 +106,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const addProductBtn = document.getElementById('add-product-btn');
             const productsContainer = document.getElementById('products-container');
-            let productCount = productsContainer.children.length;
+            let productCount = productsContainer.children.length; // Start with current number of entries
 
             addProductBtn.addEventListener('click', function() {
                 productCount++;
@@ -101,12 +115,17 @@
                 newProductEntry.innerHTML = `
                     <h4>Produkt #${productCount}</h4>
                     <div class="form-group">
-                        <label for="products-${productCount - 1}-form-product_sku">SKU Produktu</label>
-                        <input type="text" id="products-${productCount - 1}-form-product_sku" name="products-${productCount - 1}-form-product_sku" class="form-control" required>
+                        <label for="products-${productCount - 1}-product_sku">SKU Produktu</label>
+                        <input type="text" id="products-${productCount - 1}-product_sku" name="products-${productCount - 1}-product_sku" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label for="products-${productCount - 1}-form-quantity">Ilość</label>
-                        <input type="number" id="products-${productCount - 1}-form-quantity" name="products-${productCount - 1}-form-quantity" class="form-control" value="1" min="1" required>
+                        <label for="products-${productCount - 1}-quantity">Ilość</label>
+                        <input type="number" id="products-${productCount - 1}-quantity" name="products-${productCount - 1}-quantity" class="form-control" value="1" min="1" required>
+                    </div>
+                    {# === NOWE POLE DLA LOKALIZACJI w dynamicznym JS === #}
+                    <div class="form-group">
+                        <label for="products-${productCount - 1}-location">Lokalizacja (np. A1-01)</label>
+                        <input type="text" id="products-${productCount - 1}-location" name="products-${productCount - 1}-location" class="form-control" required>
                     </div>
                     <button type="button" class="btn btn-danger btn-sm remove-product-btn">Usuń produkt</button>
                 `;
@@ -118,11 +137,11 @@
                 const removeButtons = document.querySelectorAll('.remove-product-btn');
                 removeButtons.forEach(button => {
                     button.onclick = function() {
-                        if (productsContainer.children.length > 1) {
+                        if (productsContainer.children.length > 1) { // Upewnij się, że zawsze jest co najmniej jeden produkt
                             this.closest('.product-entry-group').remove();
                             updateProductEntryIndexes();
                         } else {
-                            alert('Wysyłka musi zawierać co najmniej jeden produkt.');
+                            alert('Przyjęcie musi zawierać co najmniej jeden produkt.');
                         }
                     };
                 });
@@ -134,25 +153,35 @@
                     const h4 = group.querySelector('h4');
                     h4.textContent = `Produkt #${index + 1}`;
 
-                    const skuInput = group.querySelector(`input[name^="products-"][name$="-form-product_sku"]`);
-                    const quantityInput = group.querySelector(`input[name^="products-"][name$="-form-quantity"]`);
-
+                    // Aktualizacja atrybutów 'id' i 'name' dla SKU
+                    const skuInput = group.querySelector(`input[name$="-product_sku"]`);
                     if (skuInput) {
-                        skuInput.id = `products-${index}-form-product_sku`;
-                        skuInput.name = `products-${index}-form-product_sku`;
-                        const label = group.querySelector(`label[for^="products-"][for$="-form-product_sku"]`);
-                        if (label) label.htmlFor = `products-${index}-form-product_sku`;
+                        skuInput.id = `products-${index}-product_sku`;
+                        skuInput.name = `products-${index}-product_sku`;
+                        const label = group.querySelector(`label[for$="-product_sku"]`);
+                        if (label) label.htmlFor = `products-${index}-product_sku`;
                     }
+                    // Aktualizacja atrybutów 'id' i 'name' dla Ilości
+                    const quantityInput = group.querySelector(`input[name$="-quantity"]`);
                     if (quantityInput) {
-                        quantityInput.id = `products-${index}-form-quantity`;
-                        quantityInput.name = `products-${index}-form-quantity`;
-                        const label = group.querySelector(`label[for^="products-"][for$="-form-quantity"]`);
-                        if (label) label.htmlFor = `products-${index}-form-quantity`;
+                        quantityInput.id = `products-${index}-quantity`;
+                        quantityInput.name = `products-${index}-quantity`;
+                        const label = group.querySelector(`label[for$="-quantity"]`);
+                        if (label) label.htmlFor = `products-${index}-quantity`;
+                    }
+                    // === AKTUALIZACJA ATRYBUTÓW 'id' i 'name' DLA LOKALIZACJI ===
+                    const locationInput = group.querySelector(`input[name$="-location"]`);
+                    if (locationInput) {
+                        locationInput.id = `products-${index}-location`;
+                        locationInput.name = `products-${index}-location`;
+                        const label = group.querySelector(`label[for$="-location"]`);
+                        if (label) label.htmlFor = `products-${index}-location`;
                     }
                 });
-                productCount = productsContainer.children.length;
+                productCount = productsContainer.children.length; // Zaktualizuj licznik produktów
             }
 
+            // Inicjalizuj przyciski usuwania dla początkowych elementów
             updateRemoveButtons();
         });
     </script>

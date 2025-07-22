@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 import sys
 import os
-from source import User, LoginForm, RegisterForm, AddProdForm, AddShipmentForm
+from source import User, LoginForm, RegisterForm, AddProdForm, AddShipmentForm, AddReceiveForm
 
 load_dotenv()
 
@@ -207,25 +207,23 @@ def products():
 def dashboard():
     return render_template('dashboard.html')
 
-@app.route('/receivings', methods=["GET","POST"])
+@app.route('/receives', methods=["GET","POST"])
 @login_required
-def receivings():
+def receives():
     conn=db_connect()
     cursor=conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT 
             s.id, 
             s.username, 
-            s.receiving_date, 
+            s.receives_date, 
             s.barcode 
-            -- loc.code AS location_code -- USUNIĘTE
-        FROM receivings s
-        -- JOIN locations loc ON s.location_id = loc.id -- USUNIĘTE
+        FROM receives s
     """)
     receiv=cursor.fetchall()
     cursor.close()
     conn.close()   
-    return render_template('receivings.html', rec_items=receiv)
+    return render_template('receives.html', rec_items=receiv)
 
 @app.route('/shipments', methods=['GET'])
 @login_required
@@ -319,7 +317,7 @@ def add_prod():
 
 @app.route('/shipment_detail/<string:barcode>', methods=['GET'])
 @login_required
-def shipments_detail(barcode): # Nazwa funkcji pozostaje shipments_detail
+def shipments_detail(barcode):
     conn = db_connect()
     if not conn:
         flash('Błąd połączenia z bazą danych.', 'danger')
@@ -361,17 +359,15 @@ def shipments_detail(barcode): # Nazwa funkcji pozostaje shipments_detail
                 p.name; -- Opcjonalnie: sortowanie wyników
         """
         cursor.execute(query, (shipment_id,))
-        raw_shipment_products = cursor.fetchall() # Zmieniona nazwa zmiennej
+        raw_shipment_products = cursor.fetchall()
 
-        # Przetwarzanie wyników, aby location_codes było listą
         shipment_products = []
         for item in raw_shipment_products:
-            # Tworzymy kopię słownika, żeby nie modyfikować oryginalnego wyniku z kursora
             processed_item = item.copy()
             if processed_item['location_codes']:
                 processed_item['location_codes'] = processed_item['location_codes'].split(', ')
             else:
-                processed_item['location_codes'] = [] # Ustawiamy pustą listę, jeśli brak lokalizacji
+                processed_item['location_codes'] = [] 
             shipment_products.append(processed_item)
 
 
@@ -390,9 +386,9 @@ def shipments_detail(barcode): # Nazwa funkcji pozostaje shipments_detail
 
     return render_template('shipments_detail.html', shipment_products=shipment_products, barcode=barcode)
 
-@app.route('/receivings_detail/<string:barcode>', methods=['GET'])
+@app.route('/receives_detail/<string:barcode>', methods=['GET'])
 @login_required
-def receivings_detail(barcode):
+def receives_detail(barcode):
     conn = db_connect()
     if not conn:
         flash('Błąd połączenia z bazą danych.', 'danger')
@@ -400,40 +396,47 @@ def receivings_detail(barcode):
 
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id FROM receivings WHERE barcode = %s", (barcode,))
-        shipment_info = cursor.fetchone()
+        cursor.execute("SELECT id FROM receives WHERE barcode = %s", (barcode,))
+        receive_info = cursor.fetchone()
 
-        if not shipment_info:
-            flash('Wysyłka o podanym kodzie kreskowym nie została znaleziona.', 'warning')
-            return redirect(url_for('receivings'))
+        if not receive_info:
+            # POPRAWKA: Zmieniono komunikat na "Przyjęcie..."
+            flash('Przyjęcie o podanym kodzie kreskowym nie zostało znalezione.', 'warning')
+            return redirect(url_for('receives'))
 
-        shipment_id = shipment_info['id']
+        receive_id = receive_info['id']
 
         query = """
             SELECT
-                sp.quantity AS shipped_quantity,
+                sp.quantity AS received_quantity,
                 p.name AS product_name,
                 p.sku,
                 p.description
             FROM
-                receiving_products sp
+                receives_products sp
             JOIN
                 products p ON sp.product_id = p.id
             WHERE
-                sp.receivings_id = %s;
+                sp.receives_id = %s; -- POPRAWKA: Zmieniono 'receives_id' na 'receiving_id'
         """
-        cursor.execute(query, (shipment_id,))
-        shipment_products = cursor.fetchall()
+        cursor.execute(query, (receive_id,))
+        receive_products = cursor.fetchall()
 
     except mysql.connector.Error as err:
         flash(f"Błąd bazy danych: {err}", 'danger')
-        shipment_products = []
+        print(f"BŁĄD BAZY DANYCH w receives_detail: {err}", file=sys.stderr, flush=True) # Dodano logowanie
+        receive_products = []
+    except Exception as e:
+        flash(f"Wystąpił nieoczekiwany błąd: {e}", 'danger')
+        print(f"BŁĄD NIEOCZEKIWANY w receives_detail: {e}", file=sys.stderr, flush=True) # Dodano logowanie
+        receive_products = []
     finally:
         if conn and conn.is_connected():
             cursor.close()
             conn.close()
 
-    return render_template('receivigns_detail.html', shipment_products=shipment_products, barcode=barcode)
+    return render_template('receives_detail.html', receive_products=receive_products, barcode=barcode)
+
 
 @app.route('/add_shipment', methods=['GET', 'POST'])
 @login_required
@@ -444,7 +447,7 @@ def add_shipment():
     if form.validate_on_submit():
         print("Formularz ZWALIDOWANY pomyślnie.", flush=True)
         shipment_barcode = form.barcode.data
-        # location_code usunięte z formularza AddShipmentForm
+
         username = current_user.username
 
         conn = db_connect()
@@ -465,8 +468,6 @@ def add_shipment():
                 flash(f'Wysyłka o kodzie kreskowym "{shipment_barcode}" już istnieje.', 'warning')
                 return render_template('add_shipment.html', form=form)
 
-            # Usunięto logikę związaną z location_id dla tabeli shipments
-            # INSERT do shipments bez location_id
             print("Wstawianie do tabeli 'shipments'...", flush=True)
             cursor.execute(
                 "INSERT INTO shipments (username, barcode) VALUES (%s, %s)",
@@ -501,12 +502,8 @@ def add_shipment():
                 product_id = product_data[0]
                 print(f"Znaleziono Product ID: {product_id} dla SKU: {product_sku}", flush=True)
 
-                # --- NOWA LOGIKA DLA WIELU LOKALIZACJI ---
-
-                # 1. Sprawdź całkowitą dostępną ilość dla tego produktu we wszystkich lokalizacjach
                 cursor.execute("SELECT SUM(quantity) FROM inventory WHERE product_id = %s", (product_id,))
                 total_available_stock_data = cursor.fetchone()
-                # Upewnij się, że total_available_stock_data[0] nie jest None, jeśli SUM nie zwróciło wyników
                 total_available_stock = total_available_stock_data[0] if total_available_stock_data and total_available_stock_data[0] is not None else 0
 
                 print(f"Całkowita dostępna ilość dla {product_sku}: {total_available_stock}", flush=True)
@@ -516,35 +513,30 @@ def add_shipment():
                     print(f"BŁĄD: Niewystarczająca ilość dla {product_sku}. Dostępne: {total_available_stock}, wymagane: {quantity_to_ship}.", flush=True)
                     conn.rollback()
                     return render_template('add_shipment.html', form=form)
-
-                # 2. Jeśli jest wystarczająca ilość, odejmij ją z lokalizacji, zaczynając od tych, gdzie jest towar.
-                # Sortujemy lokalizacje, aby zawsze odejmować w przewidywalnej kolejności (np. od najmniejszej ilości lub największej)
+                
                 cursor.execute("SELECT id, quantity FROM inventory WHERE product_id = %s AND quantity > 0 ORDER BY id ASC", (product_id,))
                 inventory_items_for_product = cursor.fetchall()
 
                 remaining_to_ship = quantity_to_ship
                 for inventory_item_id, current_location_stock in inventory_items_for_product:
                     if remaining_to_ship == 0:
-                        break # Wszystko już wysłane
+                        break
 
                     if current_location_stock >= remaining_to_ship:
-                        # Ta lokalizacja wystarczy na resztę wysyłki
                         new_stock_in_location = current_location_stock - remaining_to_ship
                         cursor.execute("UPDATE inventory SET quantity = %s WHERE id = %s", (new_stock_in_location, inventory_item_id))
                         print(f"Odebrano {remaining_to_ship} sztuk z inventory_id {inventory_item_id}. Nowa ilość: {new_stock_in_location}", flush=True)
                         remaining_to_ship = 0
                     else:
-                        # Ta lokalizacja nie wystarczy, zabieramy wszystko co jest
                         quantity_from_this_location = current_location_stock
                         cursor.execute("UPDATE inventory SET quantity = 0 WHERE id = %s", (inventory_item_id,))
                         remaining_to_ship -= quantity_from_this_location
                         print(f"Odebrano {quantity_from_this_location} sztuk z inventory_id {inventory_item_id}. Nowa ilość: 0. Pozostało do wysłania: {remaining_to_ship}", flush=True)
 
-                # --- KONIEC NOWEJ LOGIKI ---
 
                 cursor.execute(
                     "INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES (%s, %s, %s)",
-                    (shipment_id, product_id, quantity_to_ship) # Dodajemy oryginalną, całkowitą ilość do shipment_products
+                    (shipment_id, product_id, quantity_to_ship)
                 )
                 products_added += 1
 
@@ -585,6 +577,158 @@ def add_shipment():
 
     print("--- Zakończenie funkcji add_shipment (przed renderowaniem) ---", flush=True)
     return render_template('add_shipment.html', form=form)
+
+@app.route('/add_receive', methods=['GET', 'POST'])
+@login_required
+def add_receive():
+    form = AddReceiveForm() # Zakładam, że masz taki formularz
+    print("--- Rozpoczęcie funkcji add_receive ---", flush=True)
+
+    if form.validate_on_submit():
+        print("Formularz ZWALIDOWANY pomyślnie.", flush=True)
+        receive_barcode = form.barcode.data
+        username = current_user.username
+
+        conn = db_connect()
+        if conn is None:
+            print("BŁĄD: Połączenie z bazą danych nieudane.", flush=True)
+            flash('Błąd połączenia z bazą danych.', 'danger')
+            return render_template('add_receive.html', form=form) # Upewnij się, że masz add_receive.html
+
+        cursor = conn.cursor()
+
+        try:
+            print(f"Próba dodania przyjęcia z kodem: {receive_barcode}, użytkownik: {username}", flush=True)
+
+            cursor.execute("SELECT id FROM receives WHERE barcode = %s", (receive_barcode,)) # Tabela 'receives'
+            existing_receive = cursor.fetchone()
+            if existing_receive:
+                print(f"OSTRZEŻENIE: Przyjęcie z kodem {receive_barcode} już istnieje.", flush=True)
+                flash(f'Przyjęcie o kodzie kreskowym "{receive_barcode}" już istnieje.', 'warning')
+                return render_template('add_receive.html', form=form)
+
+            # Insert do tabeli 'receives'
+            print("Wstawianie do tabeli 'receives'...", flush=True)
+            cursor.execute(
+                "INSERT INTO receives (username, barcode) VALUES (%s, %s)", # Tabela 'receives'
+                (username, receive_barcode)
+            )
+            conn.commit()
+            receive_id = cursor.lastrowid
+            print(f"Dodano przyjęcie. receive_id: {receive_id}", flush=True)
+
+            if receive_id is None:
+                print("BŁĄD: Nie uzyskano receive_id po wstawieniu.", flush=True)
+                flash('Nie udało się dodać nowego przyjęcia.', 'danger')
+                return render_template('add_receive.html', form=form)
+
+            products_added_to_receive = 0
+            if not form.products.entries:
+                print("Brak produktów w formularzu FieldList.", flush=True)
+
+            for i, product_entry in enumerate(form.products.entries):
+                product_sku = product_entry.form.product_sku.data.upper().strip()
+                quantity_to_receive = product_entry.form.quantity.data
+                location_code = product_entry.form.location.data.upper().strip() # Lokalizacja jest wymagana przy przyjęciu!
+                print(f"Przetwarzanie produktu {i+1}: SKU={product_sku}, Ilość do przyjęcia={quantity_to_receive}, Lokalizacja={location_code}", flush=True)
+
+                # 1. Sprawdź, czy produkt istnieje
+                cursor.execute("SELECT id FROM products WHERE sku = %s", (product_sku,))
+                product_data = cursor.fetchone()
+
+                if not product_data:
+                    flash(f'BŁĄD: Produkt o SKU "{product_sku}" nie istnieje. Najpierw dodaj produkt.', 'danger')
+                    print(f"BŁĄD: Produkt o SKU '{product_sku}' nie istnieje. Pomijanie.", flush=True)
+                    conn.rollback() # Wycofaj całą transakcję przyjęcia
+                    return render_template('add_receive.html', form=form)
+
+                product_id = product_data[0]
+                print(f"Znaleziono Product ID: {product_id} dla SKU: {product_sku}", flush=True)
+
+                # 2. Sprawdź, czy lokalizacja istnieje, jeśli nie, utwórz ją
+                cursor.execute("SELECT id FROM locations WHERE code = %s", (location_code,))
+                location_data = cursor.fetchone()
+                location_id = None
+
+                if location_data:
+                    location_id = location_data[0]
+                    print(f"Znaleziono Location ID: {location_id} dla kodu: {location_code}", flush=True)
+                else:
+                    # Opcjonalnie: jeśli chcesz automatycznie tworzyć lokalizacje
+                    print(f"Lokalizacja '{location_code}' nie istnieje. Tworzenie nowej...", flush=True)
+                    cursor.execute("INSERT INTO locations (code) VALUES (%s)", (location_code,))
+                    conn.commit() # Commitowanie, aby lastrowid było dostępne
+                    location_id = cursor.lastrowid
+                    print(f"Utworzono nową lokalizację z ID: {location_id}", flush=True)
+
+                if location_id is None:
+                    flash(f'BŁĄD: Nie udało się ustalić ID lokalizacji dla kodu "{location_code}".', 'danger')
+                    print(f"BŁĄD: Nie udało się ustalić ID lokalizacji dla kodu '{location_code}'.", flush=True)
+                    conn.rollback()
+                    return render_template('add_receive.html', form=form)
+
+                # 3. Zaktualizuj inwentarz (dodaj ilość)
+                # Sprawdź, czy produkt już istnieje w tej konkretnej lokalizacji
+                cursor.execute("SELECT id, quantity FROM inventory WHERE product_id = %s AND location_id = %s", (product_id, location_id))
+                inventory_item = cursor.fetchone()
+
+                if inventory_item:
+                    # Produkt już jest w tej lokalizacji, zaktualizuj ilość
+                    inventory_id = inventory_item[0]
+                    current_stock = inventory_item[1]
+                    new_stock = current_stock + quantity_to_receive
+                    cursor.execute("UPDATE inventory SET quantity = %s WHERE id = %s", (new_stock, inventory_id))
+                    print(f"Zaktualizowano inwentarz dla {product_sku} w lokalizacji {location_code}: {current_stock} -> {new_stock}", flush=True)
+                else:
+                    # Produktu nie ma w tej lokalizacji, dodaj nowy wpis do inwentarza
+                    cursor.execute("INSERT INTO inventory (product_id, location_id, quantity) VALUES (%s, %s, %s)",
+                                   (product_id, location_id, quantity_to_receive))
+                    print(f"Dodano nowy wpis do inwentarza dla {product_sku} w lokalizacji {location_code} z ilością {quantity_to_receive}", flush=True)
+
+                # 4. Dodaj wpis do tabeli 'receives_products'
+                cursor.execute(
+                    "INSERT INTO receives_products (receives_id, product_id, quantity) VALUES (%s, %s, %s)", # Tabela 'receives_products'
+                    (receive_id, product_id, quantity_to_receive)
+                )
+                products_added_to_receive += 1
+
+            conn.commit()
+            print(f"Zatwierdzono {products_added_to_receive} produktów do receives_products i zaktualizowano inwentarz.", flush=True)
+
+            if products_added_to_receive > 0:
+                flash(f'Przyjęcie "{receive_barcode}" zostało pomyślnie dodane z {products_added_to_receive} produktami i zaktualizowano inwentarz!', 'success')
+            else:
+                flash(f'Przyjęcie "{receive_barcode}" zostało dodane, ale bez produktów (sprawdź SKU i lokalizacje).', 'warning')
+
+            return redirect(url_for('receives')) # Przekieruj na listę przyjęć
+
+        except mysql.connector.Error as err:
+            conn.rollback()
+            print(f"BŁĄD BAZY DANYCH w add_receive: {err}", file=sys.stderr, flush=True)
+            flash(f'Wystąpił błąd bazy danych podczas dodawania przyjęcia: {err}', 'danger')
+        except Exception as e:
+            conn.rollback()
+            print(f"BŁĄD NIEOCZEKIWANY w add_receive: {e}", file=sys.stderr, flush=True)
+            flash(f'Wystąpił nieoczekiwany błąd: {e}. Spróbuj ponownie.', 'danger')
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+                print("Połączenie z bazą danych ZAMKNIĘTE.", flush=True)
+    else:
+        print("Formularz NIEZWALIDOWANY. Błędy formularza:", flush=True)
+        for field, errors in form.errors.items():
+            if isinstance(errors, dict):
+                print(f"  Pole '{field}' (zagnieżdżone błędy):", flush=True)
+                for sub_field, sub_errors in errors.items():
+                    print(f"    Podpole '{sub_field}': {', '.join(str(e) for e in sub_errors)}", flush=True)
+            elif isinstance(errors, list):
+                print(f"  Pole '{field}': {', '.join(str(e) for e in errors)}", flush=True)
+            else:
+                print(f"  Pole '{field}': {str(errors)}", flush=True)
+
+    print("--- Zakończenie funkcji add_receive (przed renderowaniem) ---", flush=True)
+    return render_template('add_receive.html', form=form)
 
 if __name__ == "__main__":
     add_admin()

@@ -1,18 +1,5 @@
--- Usuń istniejące tabele w poprawnej kolejności, jeśli już istnieją i chcesz je zresetować
--- UWAGA: To usunie WSZYSTKIE istniejące dane!
-DROP TABLE IF EXISTS receiving_products;
-DROP TABLE IF EXISTS receivings;
-DROP TABLE IF EXISTS shipment_products;
-DROP TABLE IF EXISTS shipments;
-DROP TABLE IF EXISTS list_items;
-DROP TABLE IF EXISTS lists;
-DROP TABLE IF EXISTS inventory;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS locations;
-DROP TABLE IF EXISTS users;
 
 -- Definicje tabel
-
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -80,27 +67,27 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     UNIQUE (shipment_id, product_id)
 );
 
--- Zmiana w tabeli receivings: usunięto location_id
-CREATE TABLE IF NOT EXISTS receivings (
+-- Zmiana w tabeli receives: usunięto location_id
+CREATE TABLE IF NOT EXISTS receives (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
-    receiving_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    receives_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     barcode VARCHAR(255) NOT NULL UNIQUE,
     FOREIGN KEY (username) REFERENCES users(username)
     -- FOREIGN KEY (location_id) i kolumna location_id ZOSTAŁY USUNIĘTE
 );
 
-CREATE TABLE IF NOT EXISTS receiving_products (
+CREATE TABLE IF NOT EXISTS receives_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    receiving_id INT NOT NULL,
+    receives_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (receiving_id) REFERENCES receivings(id),
+    FOREIGN KEY (receives_id) REFERENCES receives(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (receiving_id, product_id)
+    UNIQUE (receives_id, product_id)
 );
 
--- Dane początkowe (zaktualizowane o brak location_id w shipments i receivings)
+-- Dane początkowe (zaktualizowane o brak location_id w shipments i receives)
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
@@ -246,16 +233,16 @@ INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
 ((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
--- Zmiana w INSERTach dla receivings: usunięto location_id
-INSERT INTO receivings (username, barcode) VALUES
+-- Zmiana w INSERTach dla receives: usunięto location_id
+INSERT INTO receives (username, barcode) VALUES
 ('zofia', 'REC-001-PQR'),
 ('tomek', 'REC-002-STU'),
 ('piotr', 'REC-003-VWX');
 
-INSERT INTO receiving_products (receiving_id, product_id, quantity) VALUES
-((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM receivings WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM receivings WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM receivings WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM receivings WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM receivings WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+INSERT INTO receives_products (receives_id, product_id, quantity) VALUES
+((SELECT id FROM receives WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM receives WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM receives WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM receives WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM receives WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM receives WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);

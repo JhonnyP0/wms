@@ -4,23 +4,44 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
     <title>WMS</title>
+    <style>
+        /* Opcjonalny CSS do ukrywania wierszy */
+        .hidden-row {
+            display: none;
+        }
+
+        /* Styl dla pola wyszukiwania, jeśli chcesz */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-container input[type="text"] {
+            padding: 8px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <header>
     <nav>
         <ul>
             <li><a href="{{url_for('dashboard')}}">Panel</a></li>
             <li><a href="{{url_for('products')}}">Produkty</a></li>
-            <li><a href="{{url_for('receivings')}}">Przyjęcia</a></li>
+            <li><a href="{{url_for('receives')}}">Przyjęcia</a></li>
             <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
             <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
-            <li><a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a></li>
         </ul>
     </nav>
 </header>
 
 <body>
     <h1>Wszystkie Przesyłki</h1>
-    <table border="1">
+    <div class="search-container">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
+    </div>
+   <a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a> 
+    <table id="productsTable" border="1">
         <thead>
             <tr>
                 <th>Kompletator</th>
@@ -51,6 +72,44 @@
                 });
             });
         });
+    </script>
+
+    <script>
+        function filterTable() {
+            // Pobierz wartość z pola wyszukiwania i przekonwertuj na małe litery dla łatwiejszego porównania
+            let input = document.getElementById("searchInput");
+            let filter = input.value.toLowerCase();
+
+            // Pobierz tabelę i wszystkie wiersze (tr) w jej ciele (tbody)
+            let table = document.getElementById("productsTable"); // Upewnij się, że tabela ma id="productsTable"
+            let tr = table.getElementsByTagName("tr");
+
+            // Iteruj przez wszystkie wiersze tabeli, zaczynając od indeksu 1 (pomijamy nagłówek)
+            for (let i = 1; i < tr.length; i++) {
+                let found = false;
+                // Pobierz wszystkie komórki (td) w bieżącym wierszu
+                let td = tr[i].getElementsByTagName("td");
+
+                // Iteruj przez każdą komórkę w wierszu
+                for (let j = 0; j < td.length; j++) {
+                    let cell = td[j];
+                    if (cell) {
+                        // Sprawdź, czy tekst w komórce zawiera szukaną frazę
+                        if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
+                            found = true;
+                            break; // Znaleziono pasującą frazę w tym wierszu, nie trzeba szukać dalej
+                        }
+                    }
+                }
+
+                // Jeśli fraza została znaleziona w tym wierszu, pokaż go, w przeciwnym razie ukryj
+                if (found) {
+                    tr[i].classList.remove("hidden-row"); // Usuń klasę ukrywającą
+                } else {
+                    tr[i].classList.add("hidden-row"); // Dodaj klasę ukrywającą
+                }
+            }
+        }
     </script>
     </body>
 </html>
