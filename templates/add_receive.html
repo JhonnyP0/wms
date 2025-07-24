@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Dodaj Przyjęcie - WMS</title> {# Zmieniono tytuł na "Dodaj Przyjęcie" #}
+    <title>Dodaj Przyjęcie - WMS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
 <body>
@@ -19,7 +19,7 @@
     </header>
 
     <div class="container mt-4">
-        <h2>Dodaj Nowe Przyjęcie</h2> {# Zmieniono nagłówek na "Dodaj Nowe Przyjęcie" #}
+        <h2>Dodaj Nowe Przyjęcie</h2>
         <hr>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -32,25 +32,14 @@
             {% endif %}
         {% endwith %}
 
-        {# Akcja formularza jest OK, jeśli prowadzi do add_receive #}
+
        <form method="POST" action="{{ url_for('add_receive') }}">
             {{ form.csrf_token }}
 
-            <div class="form-group">
-                {{ form.barcode.label }}
-                {{ form.barcode(class="form-control") }}
-                {% if form.barcode.errors %}
-                    <ul class="errors">
-                        {% for error in form.barcode.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            </div>
-
-            <h3>Produkty do przyjęcia:</h3> {# Zmieniono tekst #}
+            {# Usunięto pole location_code na poziomie całego formularza, ponieważ jest w ReceiveProductForm #}
+            {# <h3>Produkty do przyjęcia:</h3> #}
             <div id="products-container">
-                {# Pętla dla istniejących (już dodanych) pól produktów #}
+
                 {% for product_entry in form.products %}
                     <div class="product-entry-group form-group border p-3 mb-2 rounded">
                         <h4>Produkt #{{ loop.index }}</h4>
@@ -76,7 +65,7 @@
                                 </ul>
                             {% endif %}
                         </div>
-                        {# === NOWE POLE DLA LOKALIZACJI === #}
+
                         <div class="form-group">
                             {{ product_entry.form.location.label }}
                             {{ product_entry.form.location(class="form-control") }}
@@ -102,14 +91,51 @@
     </div>
 
     <script>
-        // JavaScript do dynamicznego dodawania pól dla produktów
         document.addEventListener('DOMContentLoaded', function() {
             const addProductBtn = document.getElementById('add-product-btn');
             const productsContainer = document.getElementById('products-container');
-            let productCount = productsContainer.children.length; // Start with current number of entries
+            let productCount = productsContainer.children.length;
+
+            // Funkcja do aktualizacji indeksów i nazw pól
+            function updateProductEntryIndexes() {
+                const productEntryGroups = productsContainer.querySelectorAll('.product-entry-group');
+                productEntryGroups.forEach((group, index) => {
+                    const h4 = group.querySelector('h4');
+                    h4.textContent = `Produkt #${index + 1}`;
+
+                    // Aktualizacja nazw i id dla SKU
+                    const skuInput = group.querySelector(`input[id$="-product_sku"]`);
+                    if (skuInput) {
+                        skuInput.id = `products-${index}-product_sku`;
+                        skuInput.name = `products-${index}-product_sku`;
+                        const label = group.querySelector(`label[for$="-product_sku"]`);
+                        if (label) label.htmlFor = `products-${index}-product_sku`;
+                    }
+
+                    // Aktualizacja nazw i id dla ilości
+                    const quantityInput = group.querySelector(`input[id$="-quantity"]`);
+                    if (quantityInput) {
+                        quantityInput.id = `products-${index}-quantity`;
+                        quantityInput.name = `products-${index}-quantity`;
+                        const label = group.querySelector(`label[for$="-quantity"]`);
+                        if (label) label.htmlFor = `products-${index}-quantity`;
+                    }
+
+                    // Aktualizacja nazw i id dla lokalizacji
+                    const locationInput = group.querySelector(`input[id$="-location"]`);
+                    if (locationInput) {
+                        locationInput.id = `products-${index}-location`;
+                        locationInput.name = `products-${index}-location`;
+                        const label = group.querySelector(`label[for$="-location"]`);
+                        if (label) label.htmlFor = `products-${index}-location`;
+                    }
+                });
+                productCount = productsContainer.children.length; // Zaktualizuj productCount
+            }
+
 
             addProductBtn.addEventListener('click', function() {
-                productCount++;
+                productCount++; // Inkrementuj przed użyciem, bo produkty są numerowane od 1
                 const newProductEntry = document.createElement('div');
                 newProductEntry.classList.add('product-entry-group', 'form-group', 'border', 'p-3', 'mb-2', 'rounded');
                 newProductEntry.innerHTML = `
@@ -122,7 +148,6 @@
                         <label for="products-${productCount - 1}-quantity">Ilość</label>
                         <input type="number" id="products-${productCount - 1}-quantity" name="products-${productCount - 1}-quantity" class="form-control" value="1" min="1" required>
                     </div>
-                    {# === NOWE POLE DLA LOKALIZACJI w dynamicznym JS === #}
                     <div class="form-group">
                         <label for="products-${productCount - 1}-location">Lokalizacja (np. A1-01)</label>
                         <input type="text" id="products-${productCount - 1}-location" name="products-${productCount - 1}-location" class="form-control" required>
@@ -130,16 +155,16 @@
                     <button type="button" class="btn btn-danger btn-sm remove-product-btn">Usuń produkt</button>
                 `;
                 productsContainer.appendChild(newProductEntry);
-                updateRemoveButtons();
+                updateRemoveButtons(); // Zaktualizuj słuchacze zdarzeń dla nowych przycisków
             });
 
             function updateRemoveButtons() {
                 const removeButtons = document.querySelectorAll('.remove-product-btn');
                 removeButtons.forEach(button => {
                     button.onclick = function() {
-                        if (productsContainer.children.length > 1) { // Upewnij się, że zawsze jest co najmniej jeden produkt
+                        if (productsContainer.children.length > 1) { // Zapewnij, że zawsze jest przynajmniej jeden produkt
                             this.closest('.product-entry-group').remove();
-                            updateProductEntryIndexes();
+                            updateProductEntryIndexes(); // Zaktualizuj indeksy po usunięciu
                         } else {
                             alert('Przyjęcie musi zawierać co najmniej jeden produkt.');
                         }
@@ -147,42 +172,9 @@
                 });
             }
 
-            function updateProductEntryIndexes() {
-                const productEntryGroups = productsContainer.querySelectorAll('.product-entry-group');
-                productEntryGroups.forEach((group, index) => {
-                    const h4 = group.querySelector('h4');
-                    h4.textContent = `Produkt #${index + 1}`;
-
-                    // Aktualizacja atrybutów 'id' i 'name' dla SKU
-                    const skuInput = group.querySelector(`input[name$="-product_sku"]`);
-                    if (skuInput) {
-                        skuInput.id = `products-${index}-product_sku`;
-                        skuInput.name = `products-${index}-product_sku`;
-                        const label = group.querySelector(`label[for$="-product_sku"]`);
-                        if (label) label.htmlFor = `products-${index}-product_sku`;
-                    }
-                    // Aktualizacja atrybutów 'id' i 'name' dla Ilości
-                    const quantityInput = group.querySelector(`input[name$="-quantity"]`);
-                    if (quantityInput) {
-                        quantityInput.id = `products-${index}-quantity`;
-                        quantityInput.name = `products-${index}-quantity`;
-                        const label = group.querySelector(`label[for$="-quantity"]`);
-                        if (label) label.htmlFor = `products-${index}-quantity`;
-                    }
-                    // === AKTUALIZACJA ATRYBUTÓW 'id' i 'name' DLA LOKALIZACJI ===
-                    const locationInput = group.querySelector(`input[name$="-location"]`);
-                    if (locationInput) {
-                        locationInput.id = `products-${index}-location`;
-                        locationInput.name = `products-${index}-location`;
-                        const label = group.querySelector(`label[for$="-location"]`);
-                        if (label) label.htmlFor = `products-${index}-location`;
-                    }
-                });
-                productCount = productsContainer.children.length; // Zaktualizuj licznik produktów
-            }
-
-            // Inicjalizuj przyciski usuwania dla początkowych elementów
+            // Initial call to set up remove buttons for existing entries on page load
             updateRemoveButtons();
+            updateProductEntryIndexes(); // Upewnij się, że indeksy są poprawne przy ładowaniu strony
         });
     </script>
 </body>

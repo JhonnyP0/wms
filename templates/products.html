@@ -2,8 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
-    <title>WMS</title>
+    <title>Produkty - WMS</title>
      <style>
         /* Opcjonalny CSS do ukrywania wierszy */
         .hidden-row {
@@ -21,86 +20,97 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+        tbody tr:hover {
+            cursor: pointer;
+        }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
 <body>
-<header>
-    <nav>
-        <ul>
-            <li><a href="{{url_for('dashboard')}}">Panel</a></li>
-            <li><a href="{{url_for('products')}}">Produkty</a></li>
-            <li><a href="{{url_for('receives')}}">Przyjęcia</a></li>
-            <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
-            <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
-        </ul>
-    </nav>
-</header>
-<div class="search-container">
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj po SKU, nazwie, lokalizacji...">
-    </div>
-    <a id="button_00" href="{{url_for('add_prod')}}">Dodaj produkt</a>
-<table id="productsTable"> 
-   <thead>
-    <tr>
-      <th>ID Inwentarza</th>
-      <th>Nazwa Produktu</th>
-      <th>SKU</th>
-      <th>Opis</th>
-      <th>Lokalizacja</th>
-      <th>Ilość</th>
-    </tr>
-  </thead>
-  <tbody>
-      {% for item in prods %}
-      <tr>
-          <td>{{ item.inventory_id }}</td>
-          <td>{{ item.product_name }}</td>
-          <td>{{ item.sku }}</td>
-          <td>{{ item.description }}</td>
-          <td>{{ item.location_code }}</td>
-          <td>{{ item.quantity }}</td>
-      </tr>
-    {% else %}
-    <tr>
-      <td colspan="6">Brak produktów do wyświetlenia.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{{url_for('dashboard')}}">Panel</a></li>
+                <li><a href="{{url_for('products')}}">Produkty</a></li>
+                <li><a href="{{url_for('receives')}}">Przyjęcia</a></li>
+                <li><a href="{{url_for('shipments')}}">Wysyłka</a></li>
+                <li><a href="{{url_for('logout')}}">Wyloguj</a></li>
+            </ul>
+        </nav>
+    </header>
 
-<script>
+    <div class="container mt-4">
+        <h2>Lista Produktów</h2>
+        <div class="search-container">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
+    </div>
+        <hr>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <table id="productsTable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID Produktu</th>
+                    <th>Nazwa Produktu</th>
+                    <th>SKU</th>
+                    <th>Opis</th>
+                    <th>Ilość w Magazynie</th> {# Zmieniono nagłówek #}
+                    <th>Lokalizacje</th> {# Zmieniono nagłówek #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for prod in prods %}
+                <tr>
+                    <td>{{ prod.product_id }}</td>
+                    <td>{{ prod.product_name }}</td>
+                    <td>{{ prod.sku }}</td>
+                    <td>{{ prod.description }}</td>
+                    <td>{{ prod.total_quantity }}</td> {# Używamy nowego aliasu #}
+                    <td>{{ prod.locations_summary if prod.locations_summary else 'Brak' }}</td> {# Używamy nowego aliasu i warunku dla 'Brak' #}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="{{ url_for('add_prod') }}" class="btn btn-primary mt-3">Dodaj Nowy Produkt</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
+    </div>
+
+    <script>
         function filterTable() {
-            // Pobierz wartość z pola wyszukiwania i przekonwertuj na małe litery dla łatwiejszego porównania
             let input = document.getElementById("searchInput");
             let filter = input.value.toLowerCase();
 
-            // Pobierz tabelę i wszystkie wiersze (tr) w jej ciele (tbody)
-            let table = document.getElementById("productsTable"); // Upewnij się, że tabela ma id="productsTable"
+            let table = document.getElementById("productsTable");
             let tr = table.getElementsByTagName("tr");
 
-            // Iteruj przez wszystkie wiersze tabeli, zaczynając od indeksu 1 (pomijamy nagłówek)
             for (let i = 1; i < tr.length; i++) {
                 let found = false;
-                // Pobierz wszystkie komórki (td) w bieżącym wierszu
                 let td = tr[i].getElementsByTagName("td");
 
-                // Iteruj przez każdą komórkę w wierszu
                 for (let j = 0; j < td.length; j++) {
                     let cell = td[j];
                     if (cell) {
-                        // Sprawdź, czy tekst w komórce zawiera szukaną frazę
                         if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
                             found = true;
-                            break; // Znaleziono pasującą frazę w tym wierszu, nie trzeba szukać dalej
+                            break;
                         }
                     }
                 }
 
-                // Jeśli fraza została znaleziona w tym wierszu, pokaż go, w przeciwnym razie ukryj
                 if (found) {
-                    tr[i].classList.remove("hidden-row"); // Usuń klasę ukrywającą
+                    tr[i].classList.remove("hidden-row");
                 } else {
-                    tr[i].classList.add("hidden-row"); // Dodaj klasę ukrywającą
+                    tr[i].classList.add("hidden-row");
                 }
             }
         }

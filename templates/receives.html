@@ -21,6 +21,9 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+        tbody tr:hover {
+            cursor: pointer;
+        }
     </style>
 </head>
 <header>
@@ -44,25 +47,26 @@
     <table id="productsTable" border="1">
         <thead>
             <tr>
+                <th>ID Przyjęcia</th>
                 <th>Kompletator</th>
                 <th>Data utworzenia</th>
-                <th>Kod kreskowy</th>
             </tr>
         </thead>
         <tbody>
             {% for receive in rec_items %}
-              <tr data-href="{{ url_for('receives_detail', barcode=receive.barcode) }}" style="cursor: pointer;">                
+              <tr data-href="{{ url_for('receives_detail', id=receive.id) }}" style="cursor: pointer;">
+                <td>{{ receive.id }}</td>
                 <td>{{ receive.username}}</td>
-                <td>{{ receive.receives_date }}</td>
-                <td>{{ receive.barcode }}</td>
-              {% endfor %}
+                <td>{{ receive.receives_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+              </tr>
+            {% endfor %}
         </tbody>
     </table>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('tr[data-href]');
-            
+
             rows.forEach(row => {
                 row.addEventListener('click', function() {
                     const targetUrl = this.dataset.href;
@@ -76,40 +80,33 @@
 
     <script>
         function filterTable() {
-            // Pobierz wartość z pola wyszukiwania i przekonwertuj na małe litery dla łatwiejszego porównania
             let input = document.getElementById("searchInput");
             let filter = input.value.toLowerCase();
 
-            // Pobierz tabelę i wszystkie wiersze (tr) w jej ciele (tbody)
-            let table = document.getElementById("productsTable"); // Upewnij się, że tabela ma id="productsTable"
+            let table = document.getElementById("productsTable");
             let tr = table.getElementsByTagName("tr");
 
-            // Iteruj przez wszystkie wiersze tabeli, zaczynając od indeksu 1 (pomijamy nagłówek)
             for (let i = 1; i < tr.length; i++) {
                 let found = false;
-                // Pobierz wszystkie komórki (td) w bieżącym wierszu
                 let td = tr[i].getElementsByTagName("td");
 
-                // Iteruj przez każdą komórkę w wierszu
                 for (let j = 0; j < td.length; j++) {
                     let cell = td[j];
                     if (cell) {
-                        // Sprawdź, czy tekst w komórce zawiera szukaną frazę
                         if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
                             found = true;
-                            break; // Znaleziono pasującą frazę w tym wierszu, nie trzeba szukać dalej
+                            break;
                         }
                     }
                 }
 
-                // Jeśli fraza została znaleziona w tym wierszu, pokaż go, w przeciwnym razie ukryj
                 if (found) {
-                    tr[i].classList.remove("hidden-row"); // Usuń klasę ukrywającą
+                    tr[i].classList.remove("hidden-row");
                 } else {
-                    tr[i].classList.add("hidden-row"); // Dodaj klasę ukrywającą
+                    tr[i].classList.add("hidden-row");
                 }
             }
         }
     </script>
-    </body>
+</body>
 </html>

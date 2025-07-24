@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Szczegóły Przyjęcia - {{ barcode }}</title> {# POPRAWKA: Zmieniono tytuł #}
+    <title>Szczegóły Przyjęcia - {{ receive_id }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
 <header>
@@ -17,37 +17,35 @@
     </nav>
 </header>
 <body>
-    <h1>Szczegóły Przyjęcia: {{ barcode }}</h1> {# POPRAWKA: Zmieniono nagłówek #}
+    <h1>Szczegóły Przyjęcia: {{ receive_id }}</h1>
+    <p>Kompletator: {{ receive_info.username }}</p> 
+    <p>Data utworzenia: {{ receive_info.receives_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
 
-    {# POPRAWKA: Zmieniono 'shipment_products' na 'receive_products' #}
     {% if receive_products %}
         <table>
             <thead>
                 <tr>
                     <th>Nazwa Przedmiotu</th>
                     <th>SKU</th>
-                    <th>Przyjęta Ilość</th> {# POPRAWKA: Zmieniono na "Przyjęta Ilość" #}
+                    <th>Przyjęta Ilość</th>
                     <th>Opis</th>
                 </tr>
             </thead>
             <tbody>
-                {# POPRAWKA: Zmieniono 'shipment_products' na 'receive_products' #}
                 {% for item in receive_products %}
                     <tr>
                         <td>{{ item.product_name }}</td>
                         <td>{{ item.sku }}</td>
-                        <td>{{ item.received_quantity }}</td> {# POPRAWKA: Zmieniono na 'received_quantity' #}
+                        <td>{{ item.received_quantity }}</td>
                         <td>{{ item.description }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        {# POPRAWKA: Zmieniono komunikat #}
         <p>Brak produktów w tym przyjęciu.</p>
     {% endif %}
 
-    {# POPRAWKA: Zmieniono link powrotny na 'receives' #}
     <a href="{{ url_for('receives') }}" class="back-link">Powrót do listy przyjęć</a>
 </body>
 </html>

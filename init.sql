@@ -1,5 +1,3 @@
-
--- Definicje tabel
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -20,15 +18,14 @@ CREATE TABLE IF NOT EXISTS locations (
     code VARCHAR(10) NOT NULL UNIQUE
 );
 
--- Zmiana w tabeli inventory: dodano location_id dla śledzenia produktu w wielu miejscach
 CREATE TABLE IF NOT EXISTS inventory (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
-    location_id INT NOT NULL, -- Dodana kolumna location_id
+    location_id INT NOT NULL,
     quantity INT NOT NULL DEFAULT 0,
     FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id), -- Klucz obcy do locations
-    UNIQUE (product_id, location_id) -- Unikalność na parze (produkt, lokalizacja)
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    UNIQUE (product_id, location_id)
 );
 
 CREATE TABLE IF NOT EXISTS lists (
@@ -47,14 +44,11 @@ CREATE TABLE IF NOT EXISTS list_items (
     UNIQUE (list_id, product_id)
 );
 
--- Zmiana w tabeli shipments: usunięto location_id
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
-    shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    barcode VARCHAR(255) NOT NULL UNIQUE,
+    shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,  -- #FIXME: timestamp jest nieprawidłowy
     FOREIGN KEY (username) REFERENCES users(username)
-    -- FOREIGN KEY (location_id) i kolumna location_id ZOSTAŁY USUNIĘTE
 );
 
 CREATE TABLE IF NOT EXISTS shipment_products (
@@ -67,14 +61,11 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     UNIQUE (shipment_id, product_id)
 );
 
--- Zmiana w tabeli receives: usunięto location_id
 CREATE TABLE IF NOT EXISTS receives (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     receives_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    barcode VARCHAR(255) NOT NULL UNIQUE,
     FOREIGN KEY (username) REFERENCES users(username)
-    -- FOREIGN KEY (location_id) i kolumna location_id ZOSTAŁY USUNIĘTE
 );
 
 CREATE TABLE IF NOT EXISTS receives_products (
@@ -87,7 +78,6 @@ CREATE TABLE IF NOT EXISTS receives_products (
     UNIQUE (receives_id, product_id)
 );
 
--- Dane początkowe (zaktualizowane o brak location_id w shipments i receives)
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
@@ -131,7 +121,6 @@ INSERT INTO locations (code) VALUES
 ('C1-01'), ('C1-02'), ('C1-03'), ('C1-04'), ('C1-05'), ('C1-06'),
 ('C2-01'), ('C2-02'), ('C2-03'), ('C2-04'), ('C2-05'), ('C2-06');
 
--- Dane dla inventory, teraz z location_id, co zgadza się z danymi, które podałeś
 INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (1, (SELECT id FROM locations WHERE code = 'A1-01'), 30),
 (11, (SELECT id FROM locations WHERE code = 'A1-01'), 15),
@@ -219,30 +208,28 @@ INSERT INTO list_items (list_id, product_id, quantity) VALUES
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
 ((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
--- Zmiana w INSERTach dla shipments: usunięto location_id
-INSERT INTO shipments (username, barcode) VALUES
-('tomek', 'SHIP-001-ABC'),
-('janek', 'SHIP-002-DEF'),
-('ania', 'SHIP-003-GHI');
+INSERT INTO shipments (username) VALUES
+('tomek'),
+('janek'),
+('ania');
 
 INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
-((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM shipments WHERE barcode = 'SHIP-001-ABC'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM shipments WHERE barcode = 'SHIP-002-DEF'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM shipments WHERE barcode = 'SHIP-002-DEF'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM shipments WHERE barcode = 'SHIP-003-GHI'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
 
--- Zmiana w INSERTach dla receives: usunięto location_id
-INSERT INTO receives (username, barcode) VALUES
-('zofia', 'REC-001-PQR'),
-('tomek', 'REC-002-STU'),
-('piotr', 'REC-003-VWX');
+INSERT INTO receives (username) VALUES
+('zofia'),
+('tomek'),
+('piotr');
 
 INSERT INTO receives_products (receives_id, product_id, quantity) VALUES
-((SELECT id FROM receives WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM receives WHERE barcode = 'REC-001-PQR'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM receives WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM receives WHERE barcode = 'REC-002-STU'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM receives WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM receives WHERE barcode = 'REC-003-VWX'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);

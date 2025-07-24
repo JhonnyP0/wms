@@ -4,22 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
     <title>WMS</title>
-    <style>
-        /* Opcjonalny CSS do ukrywania wierszy */
+     <style>
         .hidden-row {
             display: none;
         }
-
-        /* Styl dla pola wyszukiwania, jeśli chcesz */
         .search-container {
             margin-bottom: 20px;
         }
-
         .search-container input[type="text"] {
             padding: 8px;
             width: 300px;
             border: 1px solid #ddd;
             border-radius: 4px;
+        }
+        tbody tr:hover {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -36,33 +35,36 @@
 </header>
 
 <body>
-    <h1>Wszystkie Przesyłki</h1>
-    <div class="search-container">
+    <h1>Wszystkie Wysyłki</h1>
+        <div class="search-container">
         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
     </div>
-   <a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a> 
-    <table id="productsTable" border="1">
+   <a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a>
+    <table id="productsTable" border="1"> {# ID tabeli pozostaje "productsTable" dla funkcji filterTable #}
         <thead>
             <tr>
+                <th>ID Wysyłki</th> {# Zmieniono nagłówek #}
                 <th>Kompletator</th>
                 <th>Data utworzenia</th>
-                <th>Kod kreskowy</th>
+                {# USUNIĘTO: <th>Kod kreskowy</th> #}
             </tr>
         </thead>
         <tbody>
             {% for shipment in ship_items %}
-              <tr data-href="{{ url_for('shipments_detail', barcode=shipment.barcode) }}" style="cursor: pointer;">                
+              <tr data-href="{{ url_for('shipments_detail', id=shipment.id) }}" style="cursor: pointer;"> {# Zmieniono barcode na id #}
+                <td>{{ shipment.id }}</td> {# Wyświetlamy ID #}
                 <td>{{ shipment.username}}</td>
-                <td>{{ shipment.shipment_date }}</td>
-                <td>{{ shipment.barcode }}</td>
-              {% endfor %}
+                <td>{{ shipment.shipment_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                {# USUNIĘTO: <td>{{ shipment.barcode }}</td> #}
+              </tr>
+            {% endfor %}
         </tbody>
     </table>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('tr[data-href]');
-            
+
             rows.forEach(row => {
                 row.addEventListener('click', function() {
                     const targetUrl = this.dataset.href;
@@ -76,40 +78,33 @@
 
     <script>
         function filterTable() {
-            // Pobierz wartość z pola wyszukiwania i przekonwertuj na małe litery dla łatwiejszego porównania
             let input = document.getElementById("searchInput");
             let filter = input.value.toLowerCase();
 
-            // Pobierz tabelę i wszystkie wiersze (tr) w jej ciele (tbody)
-            let table = document.getElementById("productsTable"); // Upewnij się, że tabela ma id="productsTable"
+            let table = document.getElementById("productsTable");
             let tr = table.getElementsByTagName("tr");
 
-            // Iteruj przez wszystkie wiersze tabeli, zaczynając od indeksu 1 (pomijamy nagłówek)
             for (let i = 1; i < tr.length; i++) {
                 let found = false;
-                // Pobierz wszystkie komórki (td) w bieżącym wierszu
                 let td = tr[i].getElementsByTagName("td");
 
-                // Iteruj przez każdą komórkę w wierszu
                 for (let j = 0; j < td.length; j++) {
                     let cell = td[j];
                     if (cell) {
-                        // Sprawdź, czy tekst w komórce zawiera szukaną frazę
                         if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
                             found = true;
-                            break; // Znaleziono pasującą frazę w tym wierszu, nie trzeba szukać dalej
+                            break;
                         }
                     }
                 }
 
-                // Jeśli fraza została znaleziona w tym wierszu, pokaż go, w przeciwnym razie ukryj
                 if (found) {
-                    tr[i].classList.remove("hidden-row"); // Usuń klasę ukrywającą
+                    tr[i].classList.remove("hidden-row");
                 } else {
-                    tr[i].classList.add("hidden-row"); // Dodaj klasę ukrywającą
+                    tr[i].classList.add("hidden-row");
                 }
             }
         }
     </script>
-    </body>
+</body>
 </html>

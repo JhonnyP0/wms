@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Szczegóły Przesyłki</title>
+    <title>Szczegóły Wysyłki - {{ shipment_id }}</title> 
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
 <header>
@@ -17,7 +17,10 @@
     </nav>
 </header>
 <body>
-    <h1>Szczegóły Przesyłki: {{ barcode }}</h1>
+    <h1>Szczegóły Wysyłki: {{ shipment_id }}</h1> 
+    <p>Kompletator: {{ shipment_info.username }}</p>
+    <p>Data utworzenia: {{ shipment_info.shipment_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+
     {% if shipment_products %}
         <table>
             <thead>
@@ -26,7 +29,6 @@
                     <th>SKU</th>
                     <th>Wysłana Ilość</th>
                     <th>Opis</th>
-                    <th>Aktualna Lokalizacja</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,23 +38,14 @@
                         <td>{{ item.sku }}</td>
                         <td>{{ item.shipped_quantity }}</td>
                         <td>{{ item.description }}</td>
-                        <td>
-                            {% if item.location_codes %}
-                                {% for location in item.location_codes %}
-                                    {{ location }}<br>
-                                {% endfor %}
-                            {% else %}
-                                Brak danych o lokalizacji
-                            {% endif %}
-                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>Brak przedmiotów w tej przesyłce.</p>
+        <p>Brak produktów w tej wysyłce.</p>
     {% endif %}
 
-    <a href="{{ url_for('shipments') }}" class="back-link">Powrót do listy przesyłek</a>
+    <a href="{{ url_for('shipments') }}" class="back-link">Powrót do listy wysyłek</a>
 </body>
 </html>
