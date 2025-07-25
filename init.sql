@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS list_items (
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
-    shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,  -- #FIXME: timestamp jest nieprawidłowy
+    shipment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (username) REFERENCES users(username)
 );
 
