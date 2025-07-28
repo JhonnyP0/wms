@@ -10,12 +10,14 @@ CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     sku VARCHAR(50) NOT NULL UNIQUE,
+    barcode_image_path VARCHAR(255) UNIQUE,
     description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(10) NOT NULL UNIQUE
+    code VARCHAR(10) NOT NULL UNIQUE,
+    barcode_image_path VARCHAR(255) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
@@ -55,10 +57,12 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     shipment_id INT NOT NULL,
     product_id INT NOT NULL,
+    location_id INT NOT NULL,
     quantity INT NOT NULL,
     FOREIGN KEY (shipment_id) REFERENCES shipments(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (shipment_id, product_id)
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    UNIQUE (shipment_id, product_id, location_id)
 );
 
 CREATE TABLE IF NOT EXISTS receives (
@@ -70,12 +74,14 @@ CREATE TABLE IF NOT EXISTS receives (
 
 CREATE TABLE IF NOT EXISTS receives_products (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    receives_id INT NOT NULL,
+    receive_id INT NOT NULL,
     product_id INT NOT NULL,
+    location_id INT NOT NULL,
     quantity INT NOT NULL,
-    FOREIGN KEY (receives_id) REFERENCES receives(id),
+    FOREIGN KEY (receive_id) REFERENCES receives(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (receives_id, product_id)
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    UNIQUE (receive_id, product_id, location_id)
 );
 
 
@@ -213,23 +219,25 @@ INSERT INTO shipments (username) VALUES
 ('janek'),
 ('ania');
 
-INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES
-((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+-- Poprawione INSERT dla shipment_products: dodano location_id
+INSERT INTO shipment_products (shipment_id, product_id, location_id, quantity) VALUES
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
 
 INSERT INTO receives (username) VALUES
 ('zofia'),
 ('tomek'),
 ('piotr');
 
-INSERT INTO receives_products (receives_id, product_id, quantity) VALUES
-((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
+-- Poprawione INSERT dla receives_products: dodano location_id
+INSERT INTO receives_products (receive_id, product_id, location_id, quantity) VALUES
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);

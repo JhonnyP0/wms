@@ -32,8 +32,6 @@ class AddProdForm(FlaskForm):
 class ShipmentProductForm(FlaskForm):
     product_sku = StringField('SKU Produktu', validators=[DataRequired(), Length(min=1, max=50)])
     quantity = IntegerField('Ilość', validators=[DataRequired(), NumberRange(min=1)])
-    # NOWE POLE: Pole wyboru lokalizacji
-    # choices=[] na początku, bo będą wypełniane dynamicznie przez JS
     location_id = SelectField('Lokalizacja', choices=[('', 'Wybierz lokalizację')], validators=[DataRequired()])
     
     class Meta:
@@ -43,10 +41,15 @@ class AddShipmentForm(FlaskForm):
     products = FieldList(FormField(ShipmentProductForm), min_entries=1, max_entries=20)
     submit = SubmitField('Dodaj Wysyłkę')
 
-class ReceiveProductForm(Form):
+# ### ZMIANA TUTAJ ###
+# Dziedziczy z FlaskForm dla spójności, zamiast z Form
+class ReceiveProductForm(FlaskForm):
     product_sku = StringField('SKU Produktu', validators=[DataRequired(), Length(min=1, max=50)])
     quantity = IntegerField('Ilość', validators=[DataRequired(), NumberRange(min=1)])
-    location = StringField('Lokalizacja (np. A1-01)', validators=[DataRequired(), Length(min=1, max=50)])
+    location_id = SelectField('Lokalizacja', choices=[('', 'Wybierz lokalizację')], validators=[DataRequired()])
+    
+    class Meta:
+        csrf = False 
 
 class AddReceiveForm(FlaskForm):
     products = FieldList(FormField(ReceiveProductForm), min_entries=1, label='Produkty')

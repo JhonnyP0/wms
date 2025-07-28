@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for, flash,jsonify
 from functools import wraps
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
@@ -7,6 +6,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 import sys
 import os
+from barcode import Code128
+from barcode.writer import ImageWriter
 from source import User, LoginForm, RegisterForm, AddProdForm, AddShipmentForm, AddReceiveForm, ReceiveProductForm
 
 load_dotenv()
@@ -19,9 +20,94 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+def generate_barcode_image(data_to_encode, folder_path="static/barcodes"):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    try:
+        barcode_class = Code128(data_to_encode, writer=ImageWriter())
+        filename = f"{data_to_encode.replace('/', '_').replace(' ', '_')}"
+        full_path = barcode_class.save(os.path.join(folder_path, filename))
+
+        relative_path = os.path.join(os.path.basename(folder_path), os.path.basename(full_path))
+        return relative_path
+    except Exception as e:
+        app.logger.error(f"Błąd podczas generowania kodu kreskowego dla '{data_to_encode}': {e}", exc_info=True)
+        return None
+    
+def generate_all_barcodes_command():
+    """
+    Generuje kody kreskowe dla wszystkich produktów i lokalizacji,
+    które nie posiadają jeszcze przypisanej ścieżki do obrazu kodu kreskowego.
+    """
+    print("Rozpoczynanie generowania kodów kreskowych dla istniejących produktów i lokalizacji...")
+    conn = db_connect()
+    if conn is None:
+        print("Błąd: Nie można połączyć się z bazą danych.")
+        return
+
+    cursor = conn.cursor(dictionary=True) # Używamy dictionary=True, aby łatwiej odwoływać się do kolumn
+    
+    try:
+        # --- Generowanie kodów dla produktów ---
+        print("\nPrzetwarzanie produktów...")
+        cursor.execute("SELECT id, sku, barcode_image_path FROM products WHERE barcode_image_path IS NULL OR barcode_image_path = ''")
+        products_to_process = cursor.fetchall()
+        
+        if not products_to_process:
+            print("Wszystkie produkty posiadają już kody kreskowe.")
+        else:
+            for product in products_to_process:
+                sku = product['sku']
+                print(f"Generowanie kodu kreskowego dla produktu SKU: {sku}...")
+                barcode_path = generate_barcode_image(sku)
+                
+                if barcode_path:
+                    cursor.execute("UPDATE products SET barcode_image_path = %s WHERE id = %s",
+                                   (barcode_path, product['id']))
+                    conn.commit()
+                    print(f"  - Zaktualizowano produkt {sku} ze ścieżką: {barcode_path}")
+                else:
+                    print(f"  - Nie udało się wygenerować kodu kreskowego dla produktu {sku}.")
+            print("Zakończono przetwarzanie produktów.")
+
+        # --- Generowanie kodów dla lokalizacji ---
+        print("\nPrzetwarzanie lokalizacji...")
+        cursor.execute("SELECT id, code, barcode_image_path FROM locations WHERE barcode_image_path IS NULL OR barcode_image_path = ''")
+        locations_to_process = cursor.fetchall()
+
+        if not locations_to_process:
+            print("Wszystkie lokalizacje posiadają już kody kreskowe.")
+        else:
+            for location in locations_to_process:
+                code = location['code']
+                print(f"Generowanie kodu kreskowego dla lokalizacji: {code}...")
+                barcode_path = generate_barcode_image(code) # Użyj kodu lokalizacji jako danych
+                
+                if barcode_path:
+                    cursor.execute("UPDATE locations SET barcode_image_path = %s WHERE id = %s",
+                                   (barcode_path, location['id']))
+                    conn.commit()
+                    print(f"  - Zaktualizowano lokalizację {code} ze ścieżką: {barcode_path}")
+                else:
+                    print(f"  - Nie udało się wygenerować kodu kreskowego dla lokalizacji {code}.")
+            print("Zakończono przetwarzanie lokalizacji.")
+
+        print("\nGenerowanie kodów kreskowych zakończone.")
+
+    except mysql.connector.Error as err:
+        print(f"Błąd bazy danych podczas generowania kodów kreskowych: {err}")
+        conn.rollback()
+    except Exception as e:
+        print(f"Wystąpił nieoczekiwany błąd podczas generowania kodów kreskowych: {e}")
+        conn.rollback()
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
 #database connection
 def db_connect():
-    # Upewnij się, że masz dictionary=True w kursorze, jeśli używasz go do pobierania nazw kolumn
     return mysql.connector.connect(
     host = os.getenv('DB_HOST'),
     port = os.getenv('DB_PORT'),
@@ -64,8 +150,8 @@ def add_admin():
         conn=db_connect()
         cursor=conn.cursor()
 
-        username="admin"
-        password=generate_password_hash("adminpass")
+        username=os.getenv("username")
+        password=generate_password_hash(os.getenv("password"))
         email="admin@admin.admin"
         is_admin=True
 
@@ -151,24 +237,59 @@ def regal_detail(reg_code):
 
 @app.route("/pozycja/<polka_code>/<regal_code>")
 @login_required
-def polka(polka_code,regal_code):
-    conn=db_connect()
-    cursor = conn.cursor(dictionary=True)
+def polka(polka_code, regal_code):
+    conn = db_connect()
+    if conn is None:
+        flash('Błąd połączenia z bazą danych.', 'danger')
+        return redirect(url_for('dashboard'))
 
-    query="""
-            SELECT *
-            FROM
-                inventory
-            JOIN
-                products ON inventory.product_id = products.id
-            JOIN
-                locations ON inventory.location_id = locations.id
-            WHERE
-                locations.code = %s
-        """
-    cursor.execute(query, (polka_code,))
-    items = cursor.fetchall()
-    return render_template("regal_detail.html", polka_code=polka_code, items=items, regal_code=regal_code)
+    cursor = conn.cursor(dictionary=True) # Upewnij się, że kursor zwraca słowniki
+    
+    location_barcode_path = None # Zmienna do przechowywania ścieżki kodu kreskowego półki
+    
+    try:
+        # 1. Pobierz ścieżkę do kodu kreskowego dla danej półki (lokalizacji)
+        cursor.execute("SELECT barcode_image_path FROM locations WHERE code = %s", (polka_code,))
+        polka_data = cursor.fetchone()
+        
+        if polka_data and polka_data['barcode_image_path']:
+            location_barcode_path = polka_data['barcode_image_path']
+
+        # 2. Pobierz przedmioty znajdujące się na tej półce
+        # Upewnij się, że pobierasz również barcode_image_path dla produktów
+        query="""
+                SELECT 
+                    p.name AS product_name, 
+                    p.sku, 
+                    i.quantity, 
+                    p.barcode_image_path AS product_barcode_path -- Dodano: ścieżka kodu kreskowego produktu
+                FROM inventory i
+                JOIN products p ON i.product_id = p.id
+                JOIN locations l ON i.location_id = l.id
+                WHERE l.code = %s AND i.quantity > 0;
+            """
+        cursor.execute(query, (polka_code,))
+        items = cursor.fetchall()
+        
+    except mysql.connector.Error as err:
+        app.logger.error(f"Błąd bazy danych podczas pobierania danych dla półki {polka_code}: {err}", exc_info=True)
+        flash(f'Wystąpił błąd podczas pobierania danych półki: {err}', 'danger')
+        items = [] # Ustaw pustą listę w przypadku błędu
+    except Exception as e:
+        app.logger.error(f"Nieoczekiwany błąd podczas pobierania danych dla półki {polka_code}: {e}", exc_info=True)
+        flash(f'Wystąpił nieoczekiwany błąd: {e}', 'danger')
+        items = [] # Ustaw pustą listę w przypadku błędu
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+    # Przekaż ścieżkę do kodu kreskowego półki oraz listę przedmiotów do szablonu
+    return render_template("regal_detail.html", 
+                           polka_code=polka_code, 
+                           items=items, 
+                           regal_code=regal_code,
+                           location_barcode_path=location_barcode_path)
 
 @app.route('/logout', methods=['GET'])
 @login_required
@@ -181,34 +302,63 @@ def logout():
 @app.route('/products', methods=['GET'])
 @login_required
 def products():
-    conn=db_connect()
-    cursor=conn.cursor(dictionary=True)
-    
-    query="""
+    conn = db_connect()
+    if conn is None:
+        flash('Błąd połączenia z bazą danych.', 'danger')
+        return render_template('products.html', prods=[])
+
+    cursor = conn.cursor(dictionary=True)
+
+    search_query = request.args.get('query', '').strip()
+
+    try:
+        sql_query = """
             SELECT
                 p.id AS product_id,
                 p.name AS product_name,
                 p.sku,
                 p.description,
-                COALESCE(SUM(i.quantity), 0) AS total_quantity, -- Suma ilości dla danego produktu, 0 jeśli brak wpisów w inventory
-                GROUP_CONCAT(DISTINCT l.code ORDER BY l.code SEPARATOR ', ') AS locations_summary -- Zsumowanie unikalnych lokalizacji
+                p.barcode_image_path, -- <<< DODANO TĘ LINIĘ
+                COALESCE(SUM(i.quantity), 0) AS total_quantity,
+                GROUP_CONCAT(DISTINCT l.code ORDER BY l.code SEPARATOR ', ') AS locations_summary
             FROM
                 products p
-            LEFT JOIN -- Używamy LEFT JOIN, aby pokazać wszystkie produkty, nawet te bez wpisów w inventory
+            LEFT JOIN
                 inventory i ON p.id = i.product_id
-            LEFT JOIN -- Łączymy z lokalizacjami
+            LEFT JOIN
                 locations l ON i.location_id = l.id
+        """
+        sql_params = []
+
+        if search_query:
+            sql_query += """
+                WHERE p.name LIKE %s OR p.sku LIKE %s OR p.description LIKE %s
+            """
+            sql_params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+
+        sql_query += """
             GROUP BY
-                p.id, p.name, p.sku, p.description
+                p.id, p.name, p.sku, p.description, p.barcode_image_path -- <<< DODANO TĘ LINIĘ DO GROUP BY
             ORDER BY
                 p.name;
         """
 
-    cursor.execute(query)
-    prods=cursor.fetchall()
-    cursor.close()
-    conn.close()    
-    return render_template('products.html',prods=prods)
+        cursor.execute(sql_query, tuple(sql_params))
+        prods = cursor.fetchall()
+        return render_template('products.html', prods=prods)
+
+    except mysql.connector.Error as err:
+        app.logger.error(f"Błąd bazy danych podczas pobierania produktów: {err}", exc_info=True)
+        flash(f'Wystąpił błąd podczas pobierania produktów: {err}', 'danger')
+        return render_template('products.html', prods=[])
+    except Exception as e:
+        app.logger.error(f"Nieoczekiwany błąd podczas pobierania produktów: {e}", exc_info=True)
+        flash(f'Wystąpił nieoczekiwany błąd: {e}', 'danger')
+        return render_template('products.html', prods=[])
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
 
 @app.route('/dashboard', methods=['GET'])
 @login_required
@@ -258,15 +408,6 @@ def shipments():
             conn.close()
     return render_template('shipments.html', ship_items=ship_items)
 
-# Ten blok starego kodu dla add_prod jest zakomentowany
-# @app.route('/add_prod', methods=['GET','POST'])
-# @login_required
-# @admin_required
-# def add_prod():
-#     form = AddProdForm()
-#     # ... stary kod ...
-
-# Nowa, uproszczona funkcja add_prod - tylko dodaje do tabeli products
 @app.route('/add_prod', methods=['GET','POST'])
 @login_required
 @admin_required
@@ -294,14 +435,29 @@ def add_prod():
                 flash(f'Produkt o SKU "{sku}" już istnieje w katalogu. Nie dodano nowego rekordu.', 'info')
                 return redirect(url_for('products')) # Przekieruj, bo nie ma nic więcej do dodania
             else:
+                # Wstawiamy produkt bez ścieżki do kodu kreskowego na początku
                 cursor.execute("INSERT INTO products (name, sku, description) VALUES (%s, %s, %s)",
                                (name, sku, description))
-                conn.commit()
+                conn.commit() # Zatwierdzamy, aby product_id było dostępne
                 product_id = cursor.lastrowid
 
                 if product_id is None:
                     flash('Nie udało się dodać produktu. Wystąpił błąd w bazie danych.', 'danger')
                     return render_template('add_prod.html', form=form)
+
+                # Generujemy kod kreskowy i zapisujemy ścieżkę
+                barcode_path = generate_barcode_image(sku) # Używamy SKU jako danych do zakodowania
+                
+                if barcode_path:
+                    # Aktualizujemy rekord produktu o wygenerowaną ścieżkę kodu kreskowego
+                    cursor.execute("UPDATE products SET barcode_image_path = %s WHERE id = %s",
+                                   (barcode_path, product_id))
+                    conn.commit() # Zatwierdzamy aktualizację ścieżki
+                    flash(f'Kod kreskowy wygenerowany i zapisany: {barcode_path}', 'info')
+                else:
+                    flash('Nie udało się wygenerować kodu kreskowego dla produktu.', 'warning')
+                    # Jeśli kod kreskowy się nie wygenerował, nadal uznajemy produkt za dodany
+                    # ale może być potrzebna ręczna interwencja lub ponowna próba generacji
 
                 flash('Produkt został pomyślnie dodany do katalogu produktów!', 'success')
                 return redirect(url_for('products'))
@@ -321,6 +477,8 @@ def add_prod():
 
     return render_template('add_prod.html', form=form)
 
+
+#FIXME: dodaj lokalizacje przedimotow do kompletacji zeby bylo wiadomo skad zostalo sciagniete
 @app.route('/shipments_detail/<int:id>', methods=['GET'])
 @login_required
 def shipments_detail(id):
@@ -346,11 +504,14 @@ def shipments_detail(id):
                 sp.quantity AS shipped_quantity,
                 p.name AS product_name,
                 p.sku,
-                p.description
+                p.description,
+                l.code as location_code
             FROM
                 shipment_products sp
             JOIN
                 products p ON sp.product_id = p.id
+            JOIN
+                locations l ON sp.location_id = l.id
             WHERE
                 sp.shipment_id = %s;
         """
@@ -372,6 +533,7 @@ def shipments_detail(id):
 
     return render_template('shipments_detail.html', shipment_products=shipment_products, shipment_id=id, shipment_info=shipment_info)
 
+#FIXME: dodaj lokalizacje przyjetych przedmiotow zeby bylo wiadomo gdzie je odlozyc i znalezc
 @app.route('/receives_detail/<int:id>', methods=['GET'])
 @login_required
 def receives_detail(id):
@@ -382,7 +544,6 @@ def receives_detail(id):
 
     cursor = conn.cursor(dictionary=True)
     try:
-
         cursor.execute("SELECT id, username, receives_date FROM receives WHERE id = %s", (id,))
         receive_info = cursor.fetchone()
 
@@ -392,47 +553,23 @@ def receives_detail(id):
 
         receive_id = receive_info['id']
 
+        # ### POPRAWKA TUTAJ ###
+        # Zmieniono 'rp.receives_id' na 'rp.receive_id' w warunku WHERE
         query = """
             SELECT
                 rp.quantity AS received_quantity,
                 p.name AS product_name,
                 p.sku,
                 p.description,
-                l.code AS location_code -- Dodano kod lokalizacji
+                l.code AS location_code
             FROM
                 receives_products rp
             JOIN
                 products p ON rp.product_id = p.id
             JOIN
-                receives r ON rp.receives_id = r.id
-            JOIN
-                inventory i ON p.id = i.product_id AND r.username = (SELECT username FROM users WHERE id = %s) # To jest nieprawidłowe powiązanie
-            JOIN
-                locations l ON i.location_id = l.id
+                locations l ON rp.location_id = l.id
             WHERE
-                rp.receives_id = %s;
-        """
-        # Poprawka query dla receives_detail: Pobieranie lokalizacji dla każdego produktu
-        # Musimy założyć, że jeśli produkt był częścią przyjęcia, to jego lokalizacja jest określona w inventory
-        # Ale nie ma bezpośredniego linku z receives_products do location_id
-        # Jeśli przyjęcie miało wiele produktów do różnych lokalizacji, to w Receives_detail ciężko pokazać jedną lokalizację przyjęcia
-        # Zmienimy receives_detail tak, aby pokazywał lokalizacje z inventory, ale dla każdego wiersza produktu.
-        # To wymaga bardziej złożonego zapytania lub dodania location_id do receives_products.
-        # Na razie zostawmy proste zapytanie, które działa z obecną strukturą bazy, ale bez konkretnej lokalizacji z receive_products.
-
-        # Nowe query dla receives_detail:
-        query = """
-            SELECT
-                rp.quantity AS received_quantity,
-                p.name AS product_name,
-                p.sku,
-                p.description
-            FROM
-                receives_products rp
-            JOIN
-                products p ON rp.product_id = p.id
-            WHERE
-                rp.receives_id = %s;
+                rp.receive_id = %s;
         """
         cursor.execute(query, (receive_id,))
         receive_products = cursor.fetchall()
@@ -451,7 +588,6 @@ def receives_detail(id):
             conn.close()
 
     return render_template('receives_detail.html', receive_products=receive_products, receive_id=id, receive_info=receive_info)
-
 
 @app.route('/get_product_locations/<sku>', methods=['GET'])
 @login_required
@@ -506,9 +642,35 @@ def get_product_locations(sku):
             cursor.close()
             conn.close()
 
+# NOWA FUNKCJA API POTRZEBNA DLA add_receive.html
+@app.route('/get_all_locations', methods=['GET'])
+@login_required
+def get_all_locations():
+    conn = db_connect()
+    if conn is None:
+        return jsonify({'error': 'Błąd połączenia z bazą danych.'}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, code FROM locations ORDER BY code;")
+        locations_data = cursor.fetchall()
+
+        locations = [{'id': item['id'], 'code': item['code']} for item in locations_data]
+        return jsonify({'locations': locations}), 200
+
+    except mysql.connector.Error as err:
+        app.logger.error(f"Błąd bazy danych podczas pobierania wszystkich lokalizacji: {err}", exc_info=True)
+        return jsonify({'error': f'Błąd bazy danych: {err}'}), 500
+    except Exception as e:
+        app.logger.error(f"Nieoczekiwany błąd podczas pobierania wszystkich lokalizacji: {e}", exc_info=True)
+        return jsonify({'error': f'Nieoczekiwany błąd: {e}'}), 500
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
 @app.route('/add_shipment', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_shipment():
     form = AddShipmentForm()
 
@@ -518,25 +680,16 @@ def add_shipment():
         return render_template('add_shipment.html', form=form)
     cursor = conn.cursor(dictionary=True)
 
-    # KLUCZOWA ZMIANA: Dynamiczne wypełnianie choices dla location_id
-    # Dzieje się to PRZED form.validate_on_submit() dla POST
-    # i PRZED render_template dla GET, aby Flask-WTF miał poprawne opcje do walidacji.
-    for product_entry_index, product_entry in enumerate(form.products.entries):
-        # Pobierz SKU z inputu. Jeśli to GET, to będzie puste/domyślne.
-        # Jeśli to POST, to będzie wartość wpisana przez użytkownika.
+    # Dynamiczne wypełnianie choices dla location_id - bez zmian, ta część jest OK
+    for product_entry in form.products.entries:
         product_sku = product_entry.form.product_sku.data
-
-        current_choices = [('', 'Wybierz lokalizację')] # Domyślna opcja
-
-        if product_sku: # Jeśli SKU zostało podane (czyli np. nie jest to początkowe ładowanie pustego formularza)
+        current_choices = [('', 'Wybierz lokalizację')] 
+        if product_sku: 
             try:
-                # Pobierz product_id dla danego SKU
                 cursor.execute("SELECT id FROM products WHERE sku = %s", (product_sku.upper().strip(),))
                 product_data = cursor.fetchone()
-
                 if product_data:
                     product_id = product_data['id']
-                    # Pobierz wszystkie lokalizacje i ich ilości dla danego product_id
                     cursor.execute(
                         """
                         SELECT l.id AS location_id, l.code AS location_code, i.quantity
@@ -548,185 +701,157 @@ def add_shipment():
                         (product_id,)
                     )
                     inventory_data = cursor.fetchall()
-
                     for item in inventory_data:
                         current_choices.append((str(item['location_id']), f"{item['location_code']} (Ilość: {item['quantity']})"))
-
             except mysql.connector.Error as err:
                 app.logger.error(f"Błąd bazy danych podczas ładowania choices dla SKU {product_sku}: {err}", exc_info=True)
-                # Możesz dodać flash tutaj, jeśli chcesz poinformować o błędzie ładowania opcji
             except Exception as e:
                 app.logger.error(f"Nieoczekiwany błąd podczas ładowania choices dla SKU {product_sku}: {e}", exc_info=True)
-        
-        # Ustaw dynamiczne opcje dla SelectField
         product_entry.form.location_id.choices = current_choices
     
-    # --- KONIEC DYNAMICZNEGO WYPEŁNIANIA CHOICES ---
-
-    if form.validate_on_submit(): # Teraz walidacja będzie mieć prawidłowe opcje
+    if form.validate_on_submit():
         username = current_user.username
-        
-        # ... (reszta logiki add_shipment - jest już prawie poprawna) ...
-        # Upewnij się, że używasz product_sku.upper().strip() tak jak w sekcji ładowania choices
-        # oraz że walidacja selected_location_id i available_in_location_row jest poprawna.
-        # Moje ostatnie zmiany w add_shipment w poprzedniej odpowiedzi były już dość dobre,
-        # ale upewnij się, że nie ma tam żadnych duplikacji logicznych czy błędów.
+        shipment_id = None # Inicjalizacja shipment_id
 
         try:
-            # ... (Tworzenie shipments, shipment_id - bez zmian) ...
+            # 1. Utwórz rekord wysyłki, ALE NIE ZATWIERDZAJ TRANSAKCJI
             cursor.execute("INSERT INTO shipments (username) VALUES (%s)", (username,))
-            conn.commit()
             shipment_id = cursor.lastrowid
 
             if shipment_id is None:
                 raise Exception("Nie udało się utworzyć nowego rekordu wysyłki.")
 
-            flash(f'Nowa wysyłka nr {shipment_id} została pomyślnie utworzona!', 'success')
+            # Mapowanie do śledzenia ilości pobranej z danej lokalizacji
+            location_quantities = {}
 
             for index, product_entry in enumerate(form.products.entries):
-                product_sku = product_entry.form.product_sku.data.upper().strip() # Upewnij się, że jest .upper().strip()
+                product_sku = product_entry.form.product_sku.data.upper().strip()
                 quantity_to_ship = product_entry.form.quantity.data
-                selected_location_id = product_entry.form.location_id.data
+                selected_location_id = int(product_entry.form.location_id.data)
 
-                # --- WALIDACJA 1: SPRAWDŹ ISTNIENIE PRODUKTU W KATALOGU ---
                 cursor.execute("SELECT id FROM products WHERE sku = %s", (product_sku,))
                 product_data = cursor.fetchone()
-
                 if not product_data:
-                    conn.rollback()
-                    flash(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}"): Produkt nie istnieje w katalogu. Dodaj go najpierw.', 'danger')
-                    return render_template('add_shipment.html', form=form)
-
+                    raise Exception(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}"): Produkt nie istnieje w katalogu. Dodaj go najpierw.')
                 product_id = product_data['id']
 
-                # --- WALIDACJA 2: SPRAWDŹ ISTNIENIE LOKALIZACJI ---
-                # location_id jest teraz wymagane przez DataRequired() w FlaskForm
-                # Jeśli jednak z jakiegoś powodu jest puste, to już Flask-WTF powinien to złapać
-                # ale dla pewności możesz zostawić tę walidację na wszelki wypadek.
-                if not selected_location_id:
-                     conn.rollback()
-                     flash(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}"): Nie wybrano lokalizacji do wysyłki. (Błąd walidacji SelectField)', 'danger')
-                     return render_template('add_shipment.html', form=form)
-
-
-                # --- WALIDACJA 3: SPRAWDŹ DOSTĘPNĄ ILOŚĆ W WYBRANEJ LOKALIZACJI ---
                 cursor.execute(
-                    "SELECT COALESCE(quantity, 0) AS available_in_location FROM inventory WHERE product_id = %s AND location_id = %s",
+                    "SELECT COALESCE(quantity, 0) AS available FROM inventory WHERE product_id = %s AND location_id = %s",
                     (product_id, selected_location_id)
                 )
-                available_in_location_row = cursor.fetchone()
-                current_quantity_in_location = available_in_location_row['available_in_location'] if available_in_location_row else 0
+                available_row = cursor.fetchone()
+                current_quantity_in_location = available_row['available'] if available_row else 0
+                
+                # Odjęcie już "zarezerwowanych" ilości w tej pętli
+                already_picked_quantity = location_quantities.get((product_id, selected_location_id), 0)
+                effective_quantity = current_quantity_in_location - already_picked_quantity
 
-                if quantity_to_ship > current_quantity_in_location:
-                    conn.rollback()
+                if quantity_to_ship > effective_quantity:
                     cursor.execute("SELECT code FROM locations WHERE id = %s", (selected_location_id,))
-                    location_code = cursor.fetchone()
-                    location_code_str = location_code['code'] if location_code else 'nieznana lokalizacja'
-                    flash(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}", Lokalizacja: {location_code_str}): Za mało produktu w wybranej lokalizacji. Dostępne: {current_quantity_in_location}, wymagane: {quantity_to_ship}.', 'danger')
-                    return render_template('add_shipment.html', form=form)
-
-                # --- ZAPIS DO shipment_products ---
+                    location_code_str = cursor.fetchone()['code']
+                    raise Exception(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}", Lokalizacja: {location_code_str}): Za mało produktu. Dostępne: {effective_quantity}, wymagane: {quantity_to_ship}.')
+                
+                # Zaktualizuj "zarezerwowaną" ilość
+                location_quantities[(product_id, selected_location_id)] = already_picked_quantity + quantity_to_ship
+                
+                # --- POPRAWIONY ZAPIS DO shipment_products ---
                 cursor.execute(
-                    "INSERT INTO shipment_products (shipment_id, product_id, quantity) VALUES (%s, %s, %s)",
-                    (shipment_id, product_id, quantity_to_ship)
+                    "INSERT INTO shipment_products (shipment_id, product_id, location_id, quantity) VALUES (%s, %s, %s, %s)",
+                    (shipment_id, product_id, selected_location_id, quantity_to_ship)
                 )
 
-                # --- LOGIKA ZMNIEJSZANIA ILOŚCI W WYBRANEJ LOKALIZACJI ---
+                # --- AKTUALIZACJA INWENTARZA (LOGIKA PRZENIESIONA) ---
                 new_quantity = current_quantity_in_location - quantity_to_ship
                 cursor.execute(
                     "UPDATE inventory SET quantity = %s WHERE product_id = %s AND location_id = %s",
                     (new_quantity, product_id, selected_location_id)
                 )
-                flash(f'Zaktualizowano inwentarz dla "{product_sku}" w wybranej lokalizacji (zmniejszono o {quantity_to_ship}).', 'info')
-            
-            conn.commit()
 
-            flash(f'Wszystkie produkty wysyłki {shipment_id} zostały pomyślnie przetworzone i usunięte z inwentarza!', 'success')
+            # 2. ZATWIERDŹ CAŁĄ TRANSAKCJĘ DOPIERO GDY WSZYSTKO SIĘ POWIODŁO
+            conn.commit()
+            flash(f'Nowa wysyłka nr {shipment_id} została pomyślnie utworzona!', 'success')
             return redirect(url_for('shipments_detail', id=shipment_id))
 
-        except mysql.connector.Error as err:
-            conn.rollback()
-            app.logger.error(f"Błąd bazy danych podczas dodawania wysyłki: {err}", exc_info=True)
-            flash(f'Wystąpił błąd podczas dodawania wysyłki: {err}. Spróbuj ponownie.', 'danger')
         except Exception as e:
+            # 3. WYCOFAJ WSZYSTKIE ZMIANY W RAZIE BŁĘDU
             conn.rollback()
-            app.logger.error(f"Nieoczekiwany błąd podczas dodawania wysyłki: {e}", exc_info=True)
-            flash(f'Wystąpił nieoczekiwany błąd: {e}. Spróbuj ponownie.', 'danger')
+            app.logger.error(f"Błąd podczas dodawania wysyłki: {e}", exc_info=True)
+            flash(f'Wystąpił błąd podczas dodawania wysyłki: {e}', 'danger')
+        
         finally:
             if conn and conn.is_connected():
                 cursor.close()
                 conn.close()
     
-    # Jeśli formularz nie został zwalidowany (GET request lub błędy walidacji WTForms)
-    # W tym przypadku form.products.entries już mają ustawione choices na podstawie powyższej logiki
     return render_template('add_shipment.html', form=form)
 
 @app.route('/add_receive', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_receive():
-    form = AddReceiveForm() # Ten formularz zawiera location_code i dynamiczną listę produktów
+    form = AddReceiveForm()
+
+    conn = db_connect()
+    if conn is None:
+        flash('Błąd połączenia z bazą danych.', 'danger')
+        return render_template('add_receive.html', form=form)
+
+    cursor = conn.cursor(dictionary=True)
+    all_location_choices = []
+    try:
+        cursor.execute("SELECT id, code FROM locations ORDER BY code;")
+        all_locations_data = cursor.fetchall()
+        all_location_choices = [(str(loc['id']), loc['code']) for loc in all_locations_data]
+    except Exception as e:
+        app.logger.error(f"Błąd podczas pobierania listy lokalizacji: {e}", exc_info=True)
+        flash("Wystąpił błąd podczas ładowania listy lokalizacji.", "danger")
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            # Nie zamykamy jeszcze połączenia, będzie potrzebne w formularzu
+            # conn.close()
+
+    for product_entry in form.products.entries:
+        product_entry.form.location_id.choices = [('', 'Wybierz lokalizację')] + all_location_choices
 
     if form.validate_on_submit():
         username = current_user.username
-        # barcode = form.barcode.data # Usunięte - nie ma już pola barcode w tym formularzu
-
-        conn = db_connect()
+        
+        # Ponowne połączenie lub wykorzystanie istniejącego, jeśli jest otwarte
+        if not conn or not conn.is_connected():
+             conn = db_connect()
+        
         if conn is None:
             flash('Błąd połączenia z bazą danych.', 'danger')
             return render_template('add_receive.html', form=form)
-
-        cursor = conn.cursor(dictionary=True) # Używamy dictionary=True, aby łatwiej odwoływać się do kolumn po nazwie
+            
+        cursor = conn.cursor(dictionary=True)
+        receive_id = None
         try:
-            # 1. Utwórz nowe przyjęcie w tabeli 'receives'
             cursor.execute("INSERT INTO receives (username) VALUES (%s)", (username,))
-            conn.commit()
             receive_id = cursor.lastrowid
 
             if receive_id is None:
                 raise Exception("Nie udało się utworzyć nowego rekordu przyjęcia.")
 
-            flash(f'Nowe przyjęcie nr {receive_id} zostało pomyślnie utworzone!', 'success')
-
-            # 2. Przetwarzaj każdy produkt w przyjęciu
             for index, product_entry in enumerate(form.products.entries):
                 product_sku = product_entry.form.product_sku.data.upper().strip()
                 quantity = product_entry.form.quantity.data
-                location_code = product_entry.form.location.data.upper().strip() # Lokalizacja dla konkretnego produktu
+                location_id = int(product_entry.form.location_id.data)
 
-                # Sprawdź, czy produkt o danym SKU istnieje w katalogu
                 cursor.execute("SELECT id FROM products WHERE sku = %s", (product_sku,))
                 product_data = cursor.fetchone()
 
                 if not product_data:
-                    conn.rollback() # Wycofaj całą transakcję, jeśli któryś produkt nie istnieje
-                    flash(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}"): Produkt nie istnieje w katalogu. Dodaj go najpierw.', 'danger')
-                    return render_template('add_receive.html', form=form)
+                    raise Exception(f'Błąd dla produktu #{index+1} (SKU: "{product_sku}"): Produkt nie istnieje w katalogu. Dodaj go najpierw.')
+                product_id = product_data['id']
 
-                product_id = product_data['id'] # Używamy 'id' bo kursor jest dictionary
-
-                # Sprawdź/utwórz lokalizację dla tego produktu
-                cursor.execute("SELECT id FROM locations WHERE code = %s", (location_code,))
-                location_data = cursor.fetchone()
-                location_id = None
-
-                if location_data:
-                    location_id = location_data['id']
-                else:
-                    cursor.execute("INSERT INTO locations (code) VALUES (%s)", (location_code,))
-                    conn.commit() # Commit, aby ID było dostępne
-                    location_id = cursor.lastrowid
-                    if location_id is None:
-                        raise Exception(f"Nie udało się utworzyć nowej lokalizacji: {location_code}.")
-
-
-                # Dodaj do receives_products (szczegóły przyjęcia)
+                # ### POPRAWKA TUTAJ ###
+                # Zmieniono 'receives_id' na 'receive_id'
                 cursor.execute(
-                    "INSERT INTO receives_products (receives_id, product_id, quantity) VALUES (%s, %s, %s)",
-                    (receive_id, product_id, quantity)
+                    "INSERT INTO receives_products (receive_id, product_id, location_id, quantity) VALUES (%s, %s, %s, %s)",
+                    (receive_id, product_id, location_id, quantity)
                 )
 
-                # Aktualizuj lub dodaj do inventory
                 cursor.execute(
                     "SELECT id, quantity FROM inventory WHERE product_id = %s AND location_id = %s",
                     (product_id, location_id)
@@ -734,34 +859,25 @@ def add_receive():
                 inventory_item = cursor.fetchone()
 
                 if inventory_item:
-                    # Produkt już istnieje w tej lokalizacji, zaktualizuj ilość
                     new_total_quantity = inventory_item['quantity'] + quantity
                     cursor.execute(
                         "UPDATE inventory SET quantity = %s WHERE id = %s",
                         (new_total_quantity, inventory_item['id'])
                     )
-                    flash(f'Zaktualizowano ilość dla "{product_sku}" w "{location_code}" (nowa ilość: {new_total_quantity}).', 'info')
                 else:
-                    # Produkt nie istnieje w tej lokalizacji, dodaj nowy wpis
                     cursor.execute(
                         "INSERT INTO inventory (product_id, location_id, quantity) VALUES (%s, %s, %s)",
                         (product_id, location_id, quantity)
                     )
-                    flash(f'Dodano "{product_sku}" do inwentarza w lokalizacji "{location_code}" (ilość: {quantity}).', 'info')
 
-            conn.commit() # Zatwierdź wszystkie zmiany po pętli produktów
-
-            flash('Wszystkie produkty przyjęcia zostały pomyślnie przetworzone i dodane/zaktualizowane w inwentarzu!', 'success')
+            conn.commit() 
+            flash(f'Nowe przyjęcie nr {receive_id} zostało pomyślnie utworzone!', 'success')
             return redirect(url_for('receives_detail', id=receive_id))
 
-        except mysql.connector.Error as err:
-            conn.rollback()
-            app.logger.error(f"Błąd bazy danych podczas dodawania przyjęcia: {err}", exc_info=True)
-            flash(f'Wystąpił błąd podczas dodawania przyjęcia: {err}. Spróbuj ponownie.', 'danger')
         except Exception as e:
             conn.rollback()
-            app.logger.error(f"Nieoczekiwany błąd podczas dodawania przyjęcia: {e}", exc_info=True)
-            flash(f'Wystąpił nieoczekiwany błąd: {e}. Spróbuj ponownie.', 'danger')
+            app.logger.error(f"Błąd podczas dodawania przyjęcia: {e}", exc_info=True)
+            flash(f'Wystąpił błąd podczas dodawania przyjęcia: {e}. Spróbuj ponownie.', 'danger')
         finally:
             if conn and conn.is_connected():
                 cursor.close()
@@ -769,7 +885,7 @@ def add_receive():
 
     return render_template('add_receive.html', form=form)
 
-
 if __name__ == "__main__":
+    generate_all_barcodes_command()
     add_admin()
     app.run(host='0.0.0.0', port=5050, debug=True)

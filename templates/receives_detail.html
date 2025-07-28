@@ -29,6 +29,7 @@
                     <th>SKU</th>
                     <th>Przyjęta Ilość</th>
                     <th>Opis</th>
+                    <th>Lokalizacja</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,6 +39,7 @@
                         <td>{{ item.sku }}</td>
                         <td>{{ item.received_quantity }}</td>
                         <td>{{ item.description }}</td>
+                        <td>{{ item.location_code}}</td>
                     </tr>
                 {% endfor %}
             </tbody>

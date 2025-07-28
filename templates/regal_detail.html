@@ -2,11 +2,13 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
+    <title>Szczegóły Półki {{ polka_code }} - WMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
-    <title>Regał {{ code }}</title>
 </head>
 <body>
-    <header>
+
+<header>
     <nav>
         <ul>
             <li><a href="{{url_for('dashboard')}}">Panel</a></li>
@@ -17,19 +19,56 @@
         </ul>
     </nav>
 </header>
-    <main id="cont_detail">
-        <section id="detail">
-    <h2>Zawartość regału {{ polka_code }}</h2>
+
+<div class="container mt-4">
+    <h1 style="text-align:center;">Półka: {{ polka_code }} (Regał: {{ regal_code }})</h1>
+    <hr>
+
+    <!-- KOD KRESKOWY DLA PÓŁKI (LOKALIZACJI) -->
+    <div style="text-align:center; margin-bottom: 30px;">
+        {% if location_barcode_path %}
+            <img src="{{ url_for('static', filename=location_barcode_path) }}" alt="Kod Kreskowy Półki {{ polka_code }}" style="width:200px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;">
+            <p>Kod Półki: {{ polka_code }}</p>
+        {% else %}
+            <p>Brak kodu kreskowego dla tej półki.</p>
+        {% endif %}
+    </div>
+
+    <h2>Przedmioty na półce:</h2>
     {% if items %}
-        <ul id="list_detail">
-        {% for item in items %}
-            <li>{{ item.name }} – ilość: {{ item.quantity }}</li>
-        {% endfor %}
-        </ul>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nazwa Produktu</th>
+                    <th>SKU</th>
+                    <th>Ilość</th>
+                    <th>Kod Kreskowy Produktu</th> <!-- Nowa kolumna dla kodu produktu -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.product_name }}</td>
+                    <td>{{ item.sku }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>
+                        {% if item.product_barcode_path %} {# Używamy product_barcode_path z zapytania SQL #}
+                            <img src="{{ url_for('static', filename=item.product_barcode_path) }}" alt="Kod Kreskowy {{ item.sku }}" style="width:100px; height:auto;">
+                        {% else %}
+                            Brak kodu
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
-        <p>Brak produktów w tym regale.</p>
+        <p>Brak przedmiotów na tej półce.</p>
     {% endif %}
-    </section>
-    </main>
+
+    <a href="{{ url_for('regal_detail', reg_code=regal_code) }}" class="btn btn-secondary mt-3">Powrót do Regału {{ regal_code }}</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
+</div>
+
 </body>
 </html>

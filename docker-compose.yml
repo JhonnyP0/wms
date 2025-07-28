@@ -6,6 +6,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: Europe/Warsaw
     ports:
       - "3306:3306"
     volumes:
@@ -29,6 +30,7 @@ services:
     environment:
       FLASK_APP: wms.py
       FLASK_ENV: development
+      TZ: Europe/Warsaw
     ports:
       - "5050:5050"
     depends_on:

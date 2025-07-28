@@ -55,34 +55,50 @@
                 </div>
             {% endif %}
         {% endwith %}
+        
+        <a href="{{ url_for('add_prod') }}" class="btn btn-primary mt-3" style="padding: 1em;">Dodaj Nowy Produkt</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
 
         <table id="productsTable" class="table table-striped">
             <thead>
                 <tr>
-                    <th>ID Produktu</th>
-                    <th>Nazwa Produktu</th>
+                    <th>ID</th>
+                    <th>Nazwa</th>
                     <th>SKU</th>
                     <th>Opis</th>
-                    <th>Ilość w Magazynie</th> {# Zmieniono nagłówek #}
-                    <th>Lokalizacje</th> {# Zmieniono nagłówek #}
-                </tr>
+                    <th>Ilość w Magazynie</th>
+                    <th>Lokalizacje</th>
+                    <th>Kod Kreskowy</th> </tr>
             </thead>
             <tbody>
-                {% for prod in prods %}
-                <tr>
-                    <td>{{ prod.product_id }}</td>
-                    <td>{{ prod.product_name }}</td>
-                    <td>{{ prod.sku }}</td>
-                    <td>{{ prod.description }}</td>
-                    <td>{{ prod.total_quantity }}</td> {# Używamy nowego aliasu #}
-                    <td>{{ prod.locations_summary if prod.locations_summary else 'Brak' }}</td> {# Używamy nowego aliasu i warunku dla 'Brak' #}
-                </tr>
-                {% endfor %}
+                {% if prods %}
+                    {% for prod in prods %}
+                        <tr>
+                            <td>{{ prod.product_id }}</td>
+                            <td>{{ prod.product_name }}</td>
+                            <td>{{ prod.sku }}</td>
+                            <td>{{ prod.description if prod.description else 'Brak' }}</td>
+                            <td>{{ prod.total_quantity }}</td>
+                            <td>{{ prod.locations_summary if prod.locations_summary else 'Brak' }}</td>
+                            <td>
+                                {% if prod.barcode_image_path %}
+                                    <img src="{{ url_for('static', filename=prod.barcode_image_path) }}" 
+                                                        alt="Kod Kreskowy {{ prod.sku }}" 
+                                                        style="width:150px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;">
+                                {% else %}
+                                    Brak kodu
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7">Brak produktów do wyświetlenia.</td> </tr>
+                {% endif %}
             </tbody>
         </table>
 
-        <a href="{{ url_for('add_prod') }}" class="btn btn-primary mt-3">Dodaj Nowy Produkt</a>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
+
     </div>
 
     <script>

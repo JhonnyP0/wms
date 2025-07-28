@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Dodaj Przyjęcie - WMS</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
     <header>
@@ -32,20 +33,17 @@
             {% endif %}
         {% endwith %}
 
-
        <form method="POST" action="{{ url_for('add_receive') }}">
             {{ form.csrf_token }}
 
-            {# Usunięto pole location_code na poziomie całego formularza, ponieważ jest w ReceiveProductForm #}
-            {# <h3>Produkty do przyjęcia:</h3> #}
+            <h3>Produkty do przyjęcia:</h3>
             <div id="products-container">
-
                 {% for product_entry in form.products %}
-                    <div class="product-entry-group form-group border p-3 mb-2 rounded">
-                        <h4>Produkt #{{ loop.index }}</h4>
-                        <div class="form-group">
+                    <div class="product-group" id="{{ product_entry.id }}">
+                        {# Usunięto: {{ product_entry.form.hidden_tag() }} - to było źródłem błędu #}
+                        <p>
                             {{ product_entry.form.product_sku.label }}
-                            {{ product_entry.form.product_sku(class="form-control") }}
+                            {{ product_entry.form.product_sku(class="sku-input") }}
                             {% if product_entry.form.product_sku.errors %}
                                 <ul class="errors">
                                     {% for error in product_entry.form.product_sku.errors %}
@@ -53,10 +51,10 @@
                                     {% endfor %}
                                 </ul>
                             {% endif %}
-                        </div>
-                        <div class="form-group">
+                        </p>
+                        <p>
                             {{ product_entry.form.quantity.label }}
-                            {{ product_entry.form.quantity(class="form-control") }}
+                            {{ product_entry.form.quantity() }}
                             {% if product_entry.form.quantity.errors %}
                                 <ul class="errors">
                                     {% for error in product_entry.form.quantity.errors %}
@@ -64,117 +62,184 @@
                                     {% endfor %}
                                 </ul>
                             {% endif %}
-                        </div>
-
-                        <div class="form-group">
-                            {{ product_entry.form.location.label }}
-                            {{ product_entry.form.location(class="form-control") }}
-                            {% if product_entry.form.location.errors %}
+                        </p>
+                        <p>
+                            {{ product_entry.form.location_id.label }} {# Używamy location_id #}
+                            {{ product_entry.form.location_id(class="location-select") }} {# Używamy location_id i klasy #}
+                            {% if product_entry.form.location_id.errors %}
                                 <ul class="errors">
-                                    {% for error in product_entry.form.location.errors %}
+                                    {% for error in product_entry.form.location_id.errors %}
                                         <li>{{ error }}</li>
                                     {% endfor %}
                                 </ul>
                             {% endif %}
-                        </div>
-                        <button type="button" class="btn btn-danger btn-sm remove-product-btn">Usuń produkt</button>
+                        </p>
+                        <button type="button" class="remove-product-btn">Usuń Produkt</button>
+                        <hr>
                     </div>
                 {% endfor %}
             </div>
-            <button type="button" id="add-product-btn" class="btn btn-info mt-2">Dodaj kolejny produkt</button>
-            <hr>
-
-            {{ form.submit(class="btn btn-success mt-3") }}
+            <button type="button" id="add-product-btn">Dodaj Kolejny Produkt</button>
+            <p>{{ form.submit(class="btn btn-primary") }}</p>
         </form>
-
         <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const addProductBtn = document.getElementById('add-product-btn');
-            const productsContainer = document.getElementById('products-container');
-            let productCount = productsContainer.children.length;
+        // Licznik produktów do generowania unikalnych ID dla nowych pól
+        let productCount = {{ form.products|length }}; 
+        const productsContainer = $('#products-container');
+        const addProductBtn = $('#add-product-btn');
 
-            // Funkcja do aktualizacji indeksów i nazw pól
-            function updateProductEntryIndexes() {
-                const productEntryGroups = productsContainer.querySelectorAll('.product-entry-group');
-                productEntryGroups.forEach((group, index) => {
-                    const h4 = group.querySelector('h4');
-                    h4.textContent = `Produkt #${index + 1}`;
+        // Funkcja do aktualizacji przycisków usuwania
+        function updateRemoveButtons() {
+            $('.remove-product-btn').off('click').on('click', function() {
+                $(this).closest('.product-group').remove();
+                updateIndexes();
+            });
+        }
 
-                    // Aktualizacja nazw i id dla SKU
-                    const skuInput = group.querySelector(`input[id$="-product_sku"]`);
-                    if (skuInput) {
-                        skuInput.id = `products-${index}-product_sku`;
-                        skuInput.name = `products-${index}-product_sku`;
-                        const label = group.querySelector(`label[for$="-product_sku"]`);
-                        if (label) label.htmlFor = `products-${index}-product_sku`;
+        // Funkcja do aktualizacji indeksów po dodaniu/usunięciu produktu
+        function updateIndexes() {
+            productsContainer.children('.product-group').each(function(index) {
+                $(this).attr('id', `products-${index}`);
+                $(this).find('[name^="products-"]').each(function() {
+                    const oldName = $(this).attr('name');
+                    if (oldName) {
+                        const newName = oldName.replace(/products-\d+-/, `products-${index}-`);
+                        $(this).attr('name', newName);
                     }
-
-                    // Aktualizacja nazw i id dla ilości
-                    const quantityInput = group.querySelector(`input[id$="-quantity"]`);
-                    if (quantityInput) {
-                        quantityInput.id = `products-${index}-quantity`;
-                        quantityInput.name = `products-${index}-quantity`;
-                        const label = group.querySelector(`label[for$="-quantity"]`);
-                        if (label) label.htmlFor = `products-${index}-quantity`;
+                    const oldId = $(this).attr('id');
+                    if (oldId) {
+                        const newId = oldId.replace(/products-\d+-/, `products-${index}-`);
+                        $(this).attr('id', newId);
                     }
-
-                    // Aktualizacja nazw i id dla lokalizacji
-                    const locationInput = group.querySelector(`input[id$="-location"]`);
-                    if (locationInput) {
-                        locationInput.id = `products-${index}-location`;
-                        locationInput.name = `products-${index}-location`;
-                        const label = group.querySelector(`label[for$="-location"]`);
-                        if (label) label.htmlFor = `products-${index}-location`;
+                    const oldFor = $(this).siblings('label[for^="products-"]').attr('for');
+                    if (oldFor) {
+                        const newFor = oldFor.replace(/products-\d+-/, `products-${index}-`);
+                        $(this).siblings('label[for^="products-"]').attr('for', newFor);
                     }
                 });
-                productCount = productsContainer.children.length; // Zaktualizuj productCount
+            });
+            productCount = productsContainer.children().length;
+            updateLocationDropdowns(); // Upewnij się, że nowe dropdowny mają prawidłowe dane
+        }
+
+        // Funkcja do dynamicznego ładowania lokalizacji dla danego SKU w przyjęciach
+        function loadLocationsForSku(skuInput) {
+            const sku = skuInput.val();
+            const locationSelect = skuInput.closest('.product-group').find('.location-select');
+
+            locationSelect.empty(); // Wyczyść obecne opcje
+            locationSelect.append($('<option></option>').attr('value', '').text('Ładowanie...'));
+
+            if (!sku) {
+                // Jeśli SKU jest puste, pobierz wszystkie lokalizacje (dla nowego produktu)
+                $.getJSON(`/get_all_locations`, function(data) {
+                    locationSelect.empty();
+                    if (data.locations && data.locations.length > 0) {
+                        locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację'));
+                        $.each(data.locations, function(i, location) {
+                            locationSelect.append($('<option></option>').attr('value', location.id).text(location.code));
+                        });
+                    } else {
+                        locationSelect.append($('<option></option>').attr('value', '').text('Brak dostępnych lokalizacji'));
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error("Error fetching all locations:", textStatus, errorThrown);
+                    locationSelect.empty();
+                    locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
+                });
+                return;
             }
 
+            // Jeśli SKU jest podane, pobierz lokalizacje z inwentarza dla tego SKU
+            // To zapytanie zwróci lokalizacje, w których produkt już jest, z obecną ilością
+            $.getJSON(`/get_product_locations/${sku}`, function(data) {
+                locationSelect.empty(); // Wyczyść ponownie po otrzymaniu danych
+                if (data.locations && data.locations.length > 0) {
+                    locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację (istniejąca)'));
+                    $.each(data.locations, function(i, location) {
+                        locationSelect.append($('<option></option>').attr('value', location.id).text(`${location.code} (Obecnie: ${location.quantity})`));
+                    });
+                } 
+                
+                // Niezależnie od tego, czy produkt jest już gdzieś, zawsze daj możliwość przyjęcia do dowolnej lokalizacji
+                $.getJSON(`/get_all_locations`, function(data_all_loc) {
+                    if (data_all_loc.locations && data_all_loc.locations.length > 0) {
+                        // Dodaj separator, jeśli już są jakieś opcje
+                        if (locationSelect.children().length > 0 && !locationSelect.children().last().text().includes('Wybierz lokalizację (nowa)')) {
+                             locationSelect.append($('<option disabled></option>').text('--- lub wybierz nową lokalizację ---'));
+                        }
+                        locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację (nowa)'));
+                        $.each(data_all_loc.locations, function(i, location) {
+                            // Dodaj tylko te lokalizacje, które nie zostały już dodane z inventory
+                            const existingIds = data.locations.map(loc => loc.id);
+                            if (!existingIds.includes(location.id)) {
+                                locationSelect.append($('<option></option>').attr('value', location.id).text(location.code));
+                            }
+                        });
+                    } else if (locationSelect.children().length === 0) { // Jeśli nic nie załadowano
+                        locationSelect.append($('<option></option>').attr('value', '').text('Brak dostępnych lokalizacji'));
+                    }
+                }).fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error("Error fetching all locations for receive:", textStatus, errorThrown);
+                    if (locationSelect.children().length === 0) {
+                        locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
+                    }
+                });
 
-            addProductBtn.addEventListener('click', function() {
-                productCount++; // Inkrementuj przed użyciem, bo produkty są numerowane od 1
-                const newProductEntry = document.createElement('div');
-                newProductEntry.classList.add('product-entry-group', 'form-group', 'border', 'p-3', 'mb-2', 'rounded');
-                newProductEntry.innerHTML = `
-                    <h4>Produkt #${productCount}</h4>
-                    <div class="form-group">
-                        <label for="products-${productCount - 1}-product_sku">SKU Produktu</label>
-                        <input type="text" id="products-${productCount - 1}-product_sku" name="products-${productCount - 1}-product_sku" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="products-${productCount - 1}-quantity">Ilość</label>
-                        <input type="number" id="products-${productCount - 1}-quantity" name="products-${productCount - 1}-quantity" class="form-control" value="1" min="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="products-${productCount - 1}-location">Lokalizacja (np. A1-01)</label>
-                        <input type="text" id="products-${productCount - 1}-location" name="products-${productCount - 1}-location" class="form-control" required>
-                    </div>
-                    <button type="button" class="btn btn-danger btn-sm remove-product-btn">Usuń produkt</button>
-                `;
-                productsContainer.appendChild(newProductEntry);
-                updateRemoveButtons(); // Zaktualizuj słuchacze zdarzeń dla nowych przycisków
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error("Error fetching locations for SKU:", textStatus, errorThrown);
+                locationSelect.empty();
+                locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
+            });
+        }
+
+        // Funkcja do inicjalizacji listenerów dla wszystkich pól SKU
+        function updateLocationDropdowns() {
+            $('.sku-input').off('change').on('change', function() {
+                loadLocationsForSku($(this));
             });
 
-            function updateRemoveButtons() {
-                const removeButtons = document.querySelectorAll('.remove-product-btn');
-                removeButtons.forEach(button => {
-                    button.onclick = function() {
-                        if (productsContainer.children.length > 1) { // Zapewnij, że zawsze jest przynajmniej jeden produkt
-                            this.closest('.product-entry-group').remove();
-                            updateProductEntryIndexes(); // Zaktualizuj indeksy po usunięciu
-                        } else {
-                            alert('Przyjęcie musi zawierać co najmniej jeden produkt.');
-                        }
-                    };
-                });
-            }
+            // Wypełnij istniejące pola przy ładowaniu strony
+            $('.sku-input').each(function() {
+                 loadLocationsForSku($(this));
+            });
+        }
 
-            // Initial call to set up remove buttons for existing entries on page load
+        // Obsługa dodawania nowego zestawu pól produktu
+        addProductBtn.on('click', function() {
+            const newEntryHtml = `
+                <div class="product-group" id="products-${productCount}">
+                    <p>
+                        <label for="products-${productCount}-product_sku">SKU Produktu</label>
+                        <input type="text" id="products-${productCount}-product_sku" name="products-${productCount}-product_sku" class="sku-input">
+                    </p>
+                    <p>
+                        <label for="products-${productCount}-quantity">Ilość</label>
+                        <input type="number" id="products-${productCount}-quantity" name="products-${productCount}-quantity" value="1" min="1">
+                    </p>
+                    <p>
+                        <label for="products-${productCount}-location_id">Lokalizacja</label>
+                        <select id="products-${productCount}-location_id" name="products-${productCount}-location_id" class="location-select">
+                            <option value="">Wybierz SKU, aby załadować lokalizacje</option>
+                        </select>
+                    </p>
+                    <button type="button" class="remove-product-btn">Usuń Produkt</button>
+                    <hr>
+                </div>
+            `;
+            productsContainer.append(newEntryHtml);
+            productCount++;
             updateRemoveButtons();
-            updateProductEntryIndexes(); // Upewnij się, że indeksy są poprawne przy ładowaniu strony
+            updateLocationDropdowns(); // Zainicjuj listenery dla nowego pola SKU
+        });
+
+        // Inicjalizacja przy ładowaniu strony
+        $(document).ready(function() {
+            updateRemoveButtons();
+            updateLocationDropdowns(); // Inicjalizuj listenery dla istniejących pól
         });
     </script>
 </body>
