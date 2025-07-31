@@ -7,4 +7,10 @@ DB_PORT=
 DB_USER=
 API_KEY=
 
+username =
+password =
+
+credentials above are obligatory for admin user creation!!!!
+
 You can run the application by opening a terminal in the folder with the application and typing the command: docker compose up --build
+

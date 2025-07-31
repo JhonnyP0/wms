@@ -51,7 +51,6 @@
         { name: "06", coords: [[480, 430], [560, 550]] },
     ];
 
-    // Pobierz kod nadrzędnego regału z szablonu Jinja
     const parentRegalCode = "{{ reg_code }}"; 
  const image = L.imageOverlay("{{ url_for('static', filename='shelf.png') }}", bounds).addTo(map);
     polki.forEach(r => {

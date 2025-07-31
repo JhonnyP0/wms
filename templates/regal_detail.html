@@ -42,7 +42,7 @@
                     <th>Nazwa Produktu</th>
                     <th>SKU</th>
                     <th>Ilość</th>
-                    <th>Kod Kreskowy Produktu</th> <!-- Nowa kolumna dla kodu produktu -->
+                    <th>Kod Kreskowy Produktu</th>
                 </tr>
             </thead>
             <tbody>
@@ -52,7 +52,7 @@
                     <td>{{ item.sku }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>
-                        {% if item.product_barcode_path %} {# Używamy product_barcode_path z zapytania SQL #}
+                        {% if item.product_barcode_path %}
                             <img src="{{ url_for('static', filename=item.product_barcode_path) }}" alt="Kod Kreskowy {{ item.sku }}" style="width:100px; height:auto;">
                         {% else %}
                             Brak kodu

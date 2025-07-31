@@ -39,7 +39,7 @@
             <div id="products-container">
                 {% for product_entry in form.products %}
                     <div class="product-group" id="{{ product_entry.id }}">
-                        {{ product_entry.form.hidden_tag() }} {# WAŻNE: Renderuj hidden_tag dla każdego subformularza #}
+                        {{ product_entry.form.hidden_tag() }} 
                         <p>
                             {{ product_entry.form.product_sku.label }}
                             {{ product_entry.form.product_sku(class="sku-input") }}
@@ -64,7 +64,7 @@
                         </p>
                         <p>
                             {{ product_entry.form.location_id.label }}
-                            {{ product_entry.form.location_id(class="location-select") }} {# Dodajemy klasę dla JS #}
+                            {{ product_entry.form.location_id(class="location-select") }}
                             {% if product_entry.form.location_id.errors %}
                                 <ul class="errors">
                                     {% for error in product_entry.form.location_id.errors %}
@@ -86,12 +86,11 @@
     </div>
 
     <script>
-        // Licznik produktów do generowania unikalnych ID dla nowych pól
         let productCount = {{ form.products|length }}; 
         const productsContainer = $('#products-container');
         const addProductBtn = $('#add-product-btn');
 
-        // Funkcja do aktualizacji przycisków usuwania
+
         function updateRemoveButtons() {
             $('.remove-product-btn').off('click').on('click', function() {
                 $(this).closest('.product-group').remove();
@@ -99,7 +98,7 @@
             });
         }
 
-        // Funkcja do aktualizacji indeksów po dodaniu/usunięciu produktu
+
         function updateIndexes() {
             productsContainer.children('.product-group').each(function(index) {
                 $(this).attr('id', `products-${index}`);
@@ -122,15 +121,14 @@
                 });
             });
             productCount = productsContainer.children().length;
-            updateLocationDropdowns(); // Upewnij się, że nowe dropdowny mają prawidłowe dane
+            updateLocationDropdowns();
         }
 
-        // Funkcja do dynamicznego ładowania lokalizacji dla danego SKU
         function loadLocationsForSku(skuInput) {
             const sku = skuInput.val();
             const locationSelect = skuInput.closest('.product-group').find('.location-select');
 
-            locationSelect.empty(); // Wyczyść obecne opcje
+            locationSelect.empty(); 
             locationSelect.append($('<option></option>').attr('value', '').text('Ładowanie...'));
 
             if (!sku) {
@@ -140,7 +138,7 @@
             }
 
             $.getJSON(`/get_product_locations/${sku}`, function(data) {
-                locationSelect.empty(); // Wyczyść ponownie po otrzymaniu danych
+                locationSelect.empty(); 
                 if (data.locations && data.locations.length > 0) {
                     locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację'));
                     $.each(data.locations, function(i, location) {
@@ -156,19 +154,16 @@
             });
         }
 
-        // Funkcja do inicjalizacji listenerów dla wszystkich pól SKU
         function updateLocationDropdowns() {
             $('.sku-input').off('change').on('change', function() {
                 loadLocationsForSku($(this));
             });
 
-            // Wypełnij istniejące pola przy ładowaniu strony
             $('.sku-input').each(function() {
                  loadLocationsForSku($(this));
             });
         }
 
-        // Obsługa dodawania nowego zestawu pól produktu
         addProductBtn.on('click', function() {
             const newEntryHtml = `
                 <div class="product-group" id="products-${productCount}">

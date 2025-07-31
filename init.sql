@@ -30,22 +30,6 @@ CREATE TABLE IF NOT EXISTS inventory (
     UNIQUE (product_id, location_id)
 );
 
-CREATE TABLE IF NOT EXISTS lists (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    list_name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT
-);
-
-CREATE TABLE IF NOT EXISTS list_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    list_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    FOREIGN KEY (list_id) REFERENCES lists(id),
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    UNIQUE (list_id, product_id)
-);
-
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
@@ -201,25 +185,11 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'C2-06'), 3),
 (25, (SELECT id FROM locations WHERE code = 'C2-06'), 20);
 
-INSERT INTO lists (list_name, description) VALUES
-('Standardowa Wysylka A', 'Lista produktów do standardowej wysyłki A'),
-('Materiały Biurowe', 'Lista materiałów biurowych do przyjęcia'),
-('Narzędzia Elektryczne', 'Lista narzędzi do wysyłki');
-
-INSERT INTO list_items (list_id, product_id, quantity) VALUES
-((SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), 1),
-((SELECT id FROM lists WHERE list_name = 'Standardowa Wysylka A'), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), 5),
-((SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), 50),
-((SELECT id FROM lists WHERE list_name = 'Materiały Biurowe'), (SELECT id FROM products WHERE sku = 'MARKER-01'), 20),
-((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), 10),
-((SELECT id FROM lists WHERE list_name = 'Narzędzia Elektryczne'), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), 3);
-
 INSERT INTO shipments (username) VALUES
 ('tomek'),
 ('janek'),
 ('ania');
 
--- Poprawione INSERT dla shipment_products: dodano location_id
 INSERT INTO shipment_products (shipment_id, product_id, location_id, quantity) VALUES
 ((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
 ((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
@@ -233,7 +203,6 @@ INSERT INTO receives (username) VALUES
 ('tomek'),
 ('piotr');
 
--- Poprawione INSERT dla receives_products: dodano location_id
 INSERT INTO receives_products (receive_id, product_id, location_id, quantity) VALUES
 ((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
 ((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),

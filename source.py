@@ -41,8 +41,6 @@ class AddShipmentForm(FlaskForm):
     products = FieldList(FormField(ShipmentProductForm), min_entries=1, max_entries=20)
     submit = SubmitField('Dodaj Wysyłkę')
 
-# ### ZMIANA TUTAJ ###
-# Dziedziczy z FlaskForm dla spójności, zamiast z Form
 class ReceiveProductForm(FlaskForm):
     product_sku = StringField('SKU Produktu', validators=[DataRequired(), Length(min=1, max=50)])
     quantity = IntegerField('Ilość', validators=[DataRequired(), NumberRange(min=1)])

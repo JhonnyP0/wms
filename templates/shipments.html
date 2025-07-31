@@ -40,22 +40,20 @@
         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
     </div>
    <a href="{{url_for('add_shipment')}}">Dodaj Wysyłkę</a>
-    <table id="productsTable" border="1"> {# ID tabeli pozostaje "productsTable" dla funkcji filterTable #}
+    <table id="productsTable" border="1">
         <thead>
             <tr>
-                <th>ID Wysyłki</th> {# Zmieniono nagłówek #}
+                <th>ID Wysyłki</th> 
                 <th>Kompletator</th>
                 <th>Data utworzenia</th>
-                {# USUNIĘTO: <th>Kod kreskowy</th> #}
             </tr>
         </thead>
         <tbody>
             {% for shipment in ship_items %}
-              <tr data-href="{{ url_for('shipments_detail', id=shipment.id) }}" style="cursor: pointer;"> {# Zmieniono barcode na id #}
-                <td>{{ shipment.id }}</td> {# Wyświetlamy ID #}
+              <tr data-href="{{ url_for('shipments_detail', id=shipment.id) }}" style="cursor: pointer;">
+                <td>{{ shipment.id }}</td>
                 <td>{{ shipment.username}}</td>
                 <td>{{ shipment.shipment_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                {# USUNIĘTO: <td>{{ shipment.barcode }}</td> #}
               </tr>
             {% endfor %}
         </tbody>
