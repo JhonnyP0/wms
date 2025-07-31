@@ -36,10 +36,6 @@ def generate_barcode_image(data_to_encode, folder_path="static/barcodes"):
         return None
     
 def generate_all_barcodes_command():
-    """
-    Generuje kody kreskowe dla wszystkich produktów i lokalizacji,
-    które nie posiadają jeszcze przypisanej ścieżki do obrazu kodu kreskowego.
-    """
     print("Rozpoczynanie generowania kodów kreskowych dla istniejących produktów i lokalizacji...")
     conn = db_connect()
     if conn is None:
@@ -297,6 +293,7 @@ def logout():
 @app.route('/products', methods=['GET'])
 @login_required
 def products():
+    generate_all_barcodes_command()
     conn = db_connect()
     if conn is None:
         flash('Błąd połączenia z bazą danych.', 'danger')
@@ -577,6 +574,77 @@ def receives_detail(id):
             conn.close()
 
     return render_template('receives_detail.html', receive_products=receive_products, receive_id=id, receive_info=receive_info)
+
+@app.route('/product_detail/<int:product_id>')
+@login_required
+def product_detail(product_id):
+    """
+    Wyświetla szczegóły produktu wraz z historią jego przyjęć i wysyłek.
+    """
+    conn = db_connect()
+    if not conn:
+        flash('Błąd połączenia z bazą danych.', 'danger')
+        return redirect(url_for('products'))
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT name, sku FROM products WHERE id = %s", (product_id,))
+        product_info = cursor.fetchone()
+
+        if not product_info:
+            flash('Produkt o podanym ID nie został znaleziony.', 'warning')
+            return redirect(url_for('products'))
+        
+        history_query = """
+            SELECT
+                transaction_id,
+                transaction_date,
+                transaction_type,
+                username,
+                quantity_change,
+                SUM(quantity_change) OVER (ORDER BY transaction_date, transaction_id) AS stock_after
+            FROM (
+                (
+                    SELECT
+                        r.id AS transaction_id,
+                        r.receives_date AS transaction_date,
+                        'Przyjęcie' AS transaction_type,
+                        rp.quantity AS quantity_change,
+                        r.username
+                    FROM receives_products rp
+                    JOIN receives r ON rp.receive_id = r.id
+                    WHERE rp.product_id = %s
+                )
+                UNION ALL
+                (
+                    SELECT
+                        s.id AS transaction_id,
+                        s.shipment_date AS transaction_date,
+                        'Wysyłka' AS transaction_type,
+                        -sp.quantity AS quantity_change,
+                        s.username
+                    FROM shipment_products sp
+                    JOIN shipments s ON sp.shipment_id = s.id
+                    WHERE sp.product_id = %s
+                )
+            ) AS transactions
+            ORDER BY transaction_date, transaction_id;
+        """
+        cursor.execute(history_query, (product_id, product_id))
+        product_history = cursor.fetchall()
+
+    except mysql.connector.Error as err:
+        flash(f"Błąd bazy danych: {err}", 'danger')
+        product_history = []
+        product_info = None
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+    return render_template('product_detail.html', 
+                           product=product_info, 
+                           history=product_history)
 
 @app.route('/get_product_locations/<sku>', methods=['GET'])
 @login_required
@@ -867,6 +935,6 @@ def add_receive():
     return render_template('add_receive.html', form=form)
 
 if __name__ == "__main__":
-    generate_all_barcodes_command()
+    #generate_all_barcodes_command()
     add_admin()
     app.run(host='0.0.0.0', port=5050, debug=True)

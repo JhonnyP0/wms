@@ -118,13 +118,14 @@
                 });
             });
             productCount = productsContainer.children().length;
-            updateLocationDropdowns();
         }
 
        
         function loadLocationsForSku(skuInput) {
             const sku = skuInput.val();
             const locationSelect = skuInput.closest('.product-group').find('.location-select');
+
+            const previouslySelectedLocationId = locationSelect.val();
 
             locationSelect.empty();
             locationSelect.append($('<option></option>').attr('value', '').text('Ładowanie...'));
@@ -137,20 +138,21 @@
                         $.each(data.locations, function(i, location) {
                             locationSelect.append($('<option></option>').attr('value', location.id).text(location.code));
                         });
+                         if (previouslySelectedLocationId) {
+                            locationSelect.val(previouslySelectedLocationId);
+                        }
                     } else {
                         locationSelect.append($('<option></option>').attr('value', '').text('Brak dostępnych lokalizacji'));
                     }
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error fetching all locations:", textStatus, errorThrown);
+                }).fail(function() {
                     locationSelect.empty();
                     locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
                 });
                 return;
             }
 
-
             $.getJSON(`/get_product_locations/${sku}`, function(data) {
-                locationSelect.empty(); // Wyczyść ponownie po otrzymaniu danych
+                locationSelect.empty(); 
                 if (data.locations && data.locations.length > 0) {
                     locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację (istniejąca)'));
                     $.each(data.locations, function(i, location) {
@@ -160,12 +162,15 @@
                 
                 $.getJSON(`/get_all_locations`, function(data_all_loc) {
                     if (data_all_loc.locations && data_all_loc.locations.length > 0) {
-                        if (locationSelect.children().length > 0 && !locationSelect.children().last().text().includes('Wybierz lokalizację (nowa)')) {
+                        if (locationSelect.children().length > 0 && !data.locations.length == 0) {
                              locationSelect.append($('<option disabled></option>').text('--- lub wybierz nową lokalizację ---'));
+                        } else {
+                            locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację'));
                         }
-                        locationSelect.append($('<option></option>').attr('value', '').text('Wybierz lokalizację (nowa)'));
+                        
+                        const existingIds = data.locations.map(loc => loc.id);
+
                         $.each(data_all_loc.locations, function(i, location) {
-                            const existingIds = data.locations.map(loc => loc.id);
                             if (!existingIds.includes(location.id)) {
                                 locationSelect.append($('<option></option>').attr('value', location.id).text(location.code));
                             }
@@ -173,15 +178,19 @@
                     } else if (locationSelect.children().length === 0) { 
                         locationSelect.append($('<option></option>').attr('value', '').text('Brak dostępnych lokalizacji'));
                     }
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error fetching all locations for receive:", textStatus, errorThrown);
+                    
+                    if (previouslySelectedLocationId) {
+                        locationSelect.val(previouslySelectedLocationId);
+                    }
+
+
+                }).fail(function() {
                     if (locationSelect.children().length === 0) {
                         locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
                     }
                 });
 
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error("Error fetching locations for SKU:", textStatus, errorThrown);
+            }).fail(function() {
                 locationSelect.empty();
                 locationSelect.append($('<option></option>').attr('value', '').text('Błąd ładowania lokalizacji'));
             });
@@ -191,15 +200,12 @@
             $('.sku-input').off('change').on('change', function() {
                 loadLocationsForSku($(this));
             });
-
-            $('.sku-input').each(function() {
-                 loadLocationsForSku($(this));
-            });
         }
 
         addProductBtn.on('click', function() {
             const newEntryHtml = `
                 <div class="product-group" id="products-${productCount}">
+                    {{ form.products.append_entry().form.hidden_tag() }}
                     <p>
                         <label for="products-${productCount}-product_sku">SKU Produktu</label>
                         <input type="text" id="products-${productCount}-product_sku" name="products-${productCount}-product_sku" class="sku-input">
@@ -211,7 +217,7 @@
                     <p>
                         <label for="products-${productCount}-location_id">Lokalizacja</label>
                         <select id="products-${productCount}-location_id" name="products-${productCount}-location_id" class="location-select">
-                            <option value="">Wybierz SKU, aby załadować lokalizacje</option>
+                            <option value="">Wprowadź SKU produktu</option>
                         </select>
                     </p>
                     <button type="button" class="remove-product-btn">Usuń Produkt</button>
@@ -219,15 +225,18 @@
                 </div>
             `;
             productsContainer.append(newEntryHtml);
-            productCount++;
             updateRemoveButtons();
             updateLocationDropdowns();
+            updateIndexes();
+            loadLocationsForSku($('#products-' + (productCount - 1) + '-product_sku'));
         });
-
 
         $(document).ready(function() {
             updateRemoveButtons();
             updateLocationDropdowns(); 
+            $('.sku-input').each(function() {
+                 loadLocationsForSku($(this));
+            });
         });
     </script>
 </body>

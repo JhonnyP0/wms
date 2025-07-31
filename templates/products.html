@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta charset="UTF-8" />
     <title>Produkty - WMS</title>
      <style>
@@ -23,6 +24,8 @@
         tbody tr:hover {
             cursor: pointer;
         }
+
+        
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
 </head>
@@ -73,7 +76,7 @@
             <tbody>
                 {% if prods %}
                     {% for prod in prods %}
-                        <tr>
+                        <tr data-href="{{ url_for('product_detail', product_id=prod.product_id) }}" style="cursor: pointer;">
                             <td>{{ prod.product_id }}</td>
                             <td>{{ prod.product_name }}</td>
                             <td>{{ prod.sku }}</td>
@@ -102,6 +105,14 @@
     </div>
 
     <script>
+
+
+        $(document).ready(function() {
+    $('[data-href]').on('click', function() {
+        window.location.href = $(this).data('href');
+    });
+});
+
         function filterTable() {
             let input = document.getElementById("searchInput");
             let filter = input.value.toLowerCase();

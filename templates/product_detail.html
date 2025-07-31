@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Historia Produktu - {{ product.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}">Panel</a></li>
+                <li><a href="{{ url_for('products') }}">Produkty</a></li>
+                <li><a href="{{ url_for('receives') }}">Przyjęcia</a></li>
+                <li><a href="{{ url_for('shipments') }}">Wysyłka</a></li>
+                <li><a href="{{ url_for('logout') }}">Wyloguj</a></li>
+            </ul>
+        </nav>
+
+    <style>
+        .tr-receive {
+    background-color: #d4edda;
+}
+
+.tr-shipment {
+    background-color: #f8d7da;
+}
+    </style>
+    </header>
+
+    <div class="container mt-4">
+        {% if product %}
+            <h2>Historia Produktu: {{ product.name }}</h2>
+            <h4>SKU: {{ product.sku }}</h4>
+        {% else %}
+            <h2>Historia Produktu</h2>
+        {% endif %}
+        
+        <hr>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="product-history-list">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Akcji</th>
+                        <th>Data</th>
+                        <th>Typ</th>
+                        <th>Użytkownik</th>
+                        <th>Ilość w akcji</th>
+                        <th>Stan po akcji</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    <tr class="{% if item.transaction_type == 'Przyjęcie' %}tr-receive{% else %}tr-shipment{% endif %}">
+                        <td>{{ item.transaction_id }}</td>
+                        <td>{{ item.transaction_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ item.transaction_type }}</td>
+                        <td>{{ item.username }}</td>
+                        <td>{{ '%+d'|format(item.quantity_change) }}</td>
+                        <td><strong>{{ item.stock_after }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center;">Brak historii operacji dla tego produktu.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="{{ url_for('products') }}" class="btn btn-secondary mt-3">Powrót do listy produktów</a>
+    </div>
+</body>
+</html>

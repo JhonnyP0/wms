@@ -85,7 +85,7 @@
         <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
     </div>
 
-    <script>
+   <script>
         let productCount = {{ form.products|length }}; 
         const productsContainer = $('#products-container');
         const addProductBtn = $('#add-product-btn');
@@ -121,12 +121,14 @@
                 });
             });
             productCount = productsContainer.children().length;
-            updateLocationDropdowns();
         }
 
         function loadLocationsForSku(skuInput) {
             const sku = skuInput.val();
             const locationSelect = skuInput.closest('.product-group').find('.location-select');
+            
+            const previouslySelectedLocationId = locationSelect.val();
+
 
             locationSelect.empty(); 
             locationSelect.append($('<option></option>').attr('value', '').text('Ładowanie...'));
@@ -144,6 +146,11 @@
                     $.each(data.locations, function(i, location) {
                         locationSelect.append($('<option></option>').attr('value', location.id).text(`${location.code} (Ilość: ${location.quantity})`));
                     });
+
+                    if (previouslySelectedLocationId) {
+                        locationSelect.val(previouslySelectedLocationId);
+                    }
+
                 } else {
                     locationSelect.append($('<option></option>').attr('value', '').text('Brak dostępnych lokalizacji lub produktu'));
                 }
@@ -158,15 +165,12 @@
             $('.sku-input').off('change').on('change', function() {
                 loadLocationsForSku($(this));
             });
-
-            $('.sku-input').each(function() {
-                 loadLocationsForSku($(this));
-            });
         }
 
         addProductBtn.on('click', function() {
             const newEntryHtml = `
                 <div class="product-group" id="products-${productCount}">
+                    {{ form.products.append_entry().form.hidden_tag() }}
                     <p>
                         <label for="products-${productCount}-product_sku">SKU Produktu</label>
                         <input type="text" id="products-${productCount}-product_sku" name="products-${productCount}-product_sku" class="sku-input">
@@ -186,15 +190,19 @@
                 </div>
             `;
             productsContainer.append(newEntryHtml);
-            productCount++;
             updateRemoveButtons();
-            updateLocationDropdowns(); // Zainicjuj listenery dla nowego pola SKU
+            updateLocationDropdowns(); 
+            updateIndexes(); 
         });
 
-        // Inicjalizacja przy ładowaniu strony
         $(document).ready(function() {
             updateRemoveButtons();
-            updateLocationDropdowns(); // Inicjalizuj listenery dla istniejących pól
+            updateLocationDropdowns(); 
+            $('.sku-input').each(function() {
+                if ($(this).val()) {
+                    loadLocationsForSku($(this));
+                }
+            });
         });
     </script>
 </body>
