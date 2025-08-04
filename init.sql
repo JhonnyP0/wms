@@ -10,14 +10,14 @@ CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     sku VARCHAR(50) NOT NULL UNIQUE,
-    barcode_image_path VARCHAR(255) UNIQUE,
-    description TEXT
+    description TEXT,
+    barcode_image_path VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(10) NOT NULL UNIQUE,
-    barcode_image_path VARCHAR(255) UNIQUE
+    location_barcode_path VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
@@ -45,8 +45,7 @@ CREATE TABLE IF NOT EXISTS shipment_products (
     quantity INT NOT NULL,
     FOREIGN KEY (shipment_id) REFERENCES shipments(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id),
-    UNIQUE (shipment_id, product_id, location_id)
+    FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
 CREATE TABLE IF NOT EXISTS receives (
@@ -64,10 +63,8 @@ CREATE TABLE IF NOT EXISTS receives_products (
     quantity INT NOT NULL,
     FOREIGN KEY (receive_id) REFERENCES receives(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id),
-    UNIQUE (receive_id, product_id, location_id)
+    FOREIGN KEY (location_id) REFERENCES locations(id)
 );
-
 
 INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('tomek', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'tomek@example.com', FALSE),
@@ -76,40 +73,40 @@ INSERT INTO users (username, password_hash, email, is_admin) VALUES
 ('piotr', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'piotr@example.com', FALSE),
 ('zofia', 'pbkdf2:sha256:260000$rXm0pQ5sT2u1vW3x$a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'zofia@example.com', FALSE);
 
-INSERT INTO products (name, sku, description) VALUES
-('Wkretarka Bosch', 'WRK-BOSCH-01', 'Wkretarka akumulatorowa 18V'),
-('Puszka 500ml', 'PUSZKA-500', 'Metalowa puszka 500 ml na plyny'),
-('Folia stretch', 'FOLIA-STRETCH', 'Folia stretch 23um, 2kg, przezroczysta'),
-('Kartony 30x30x30', 'KARTON-30', 'Kartony tekturowe, zestaw 10 sztuk'),
-('Tasma pakowa', 'TASMA-PAK', 'Tasma do pakowania, brazowa, 48mm x 50m'),
-('Karton A4', 'KARTON-A4', 'Karton formatu A4, bialy, 250g/m2'),
-('Pojemnik plastikowy', 'POJ-PLAST', 'Pojemnik z uchwytem, 10L, przezroczysty'),
-('Marker permanentny', 'MARKER-01', 'Czarny marker, wodoodporny'),
-('Naklejki ostrzegawcze', 'NAKLEJKA-OSTR', 'Zestaw etykiet "Uwaga szklo"'),
-('Etykiety termiczne', 'ETYK-TERM', 'Etykiety 1000 szt. rolka, 100x150mm'),
-('Srubokret krzyzakowy', 'SRB-KRZYZ-01', 'Srubokret PH2 x 100mm'),
-('Klucz nastawny', 'KLUCZ-NAST-01', 'Klucz nastawny 250mm'),
-('Zestaw opasek kablowych', 'OPASKI-KAB--SET', 'Opaski kablowe, mix rozmiarow, 100 szt.'),
-('Rekawice ochronne', 'REK-OCHR-M', 'Rekawice ochronne, rozmiar M'),
-('Mlotek stolarski', 'MLT-STOL-01', 'Mlotek stolarski 500g'),
-('Tasma miernicza', 'TASMA-MIERZ-5M', 'Tasma miernicza 5m'),
-('Latarka LED', 'LATARKA-LED-MINI', 'Mini latarka LED, aluminiowa'),
-('Opakowania babelkowe', 'OPAK-BABEL-10M', 'Folia babelkowa, rolka 10m'),
-('Wypelniacz do paczek', 'WYPELNIACZ-50L', 'Wypelniacz do paczek, 50L worek'),
-('Drukarka etykiet', 'DRUK-ETYK-BT', 'Drukarka etykiet termicznych Bluetooth'),
-('Skaner kodow kreskowych', 'SKANER-USB-01', 'Skaner kodow kreskowych USB'),
-('Paleta drewniana', 'PALETA-EUR-01', 'Standardowa paleta EUR'),
-('Wozek transportowy', 'WOZEK-SKLAD-01', 'Wozek transportowy skladany'),
-('Kask ochronny', 'KASK-OCHR-BIAL', 'Kask ochronny, bialy'),
-('Okulary ochronne', 'OKULARY-OCHR-PRZ', 'Okulary ochronne, przezroczyste');
+INSERT INTO products (name, sku, description, barcode_image_path) VALUES
+('Wkretarka Bosch', 'WRK-BOSCH-01', 'Wkretarka akumulatorowa 18V', 'static/barcodes/WRK-BOSCH-01.png'),
+('Puszka 500ml', 'PUSZKA-500', 'Metalowa puszka 500 ml na plyny', 'static/barcodes/PUSZKA-500.png'),
+('Folia stretch', 'FOLIA-STRETCH', 'Folia stretch 23um, 2kg, przezroczysta', 'static/barcodes/FOLIA-STRETCH.png'),
+('Kartony 30x30x30', 'KARTON-30', 'Kartony tekturowe, zestaw 10 sztuk', 'static/barcodes/KARTON-30.png'),
+('Tasma pakowa', 'TASMA-PAK', 'Tasma do pakowania, brazowa, 48mm x 50m', 'static/barcodes/TASMA-PAK.png'),
+('Karton A4', 'KARTON-A4', 'Karton formatu A4, bialy, 250g/m2', 'static/barcodes/KARTON-A4.png'),
+('Pojemnik plastikowy', 'POJ-PLAST', 'Pojemnik z uchwytem, 10L, przezroczysty', 'static/barcodes/POJ-PLAST.png'),
+('Marker permanentny', 'MARKER-01', 'Czarny marker, wodoodporny', 'static/barcodes/MARKER-01.png'),
+('Naklejki ostrzegawcze', 'NAKLEJKA-OSTR', 'Zestaw etykiet "Uwaga szklo"', 'static/barcodes/NAKLEJKA-OSTR.png'),
+('Etykiety termiczne', 'ETYK-TERM', 'Etykiety 1000 szt. rolka, 100x150mm', 'static/barcodes/ETYK-TERM.png'),
+('Srubokret krzyzakowy', 'SRB-KRZYZ-01', 'Srubokret PH2 x 100mm', 'static/barcodes/SRB-KRZYZ-01.png'),
+('Klucz nastawny', 'KLUCZ-NAST-01', 'Klucz nastawny 250mm', 'static/barcodes/KLUCZ-NAST-01.png'),
+('Zestaw opasek kablowych', 'OPASKI-KAB--SET', 'Opaski kablowe, mix rozmiarow, 100 szt.', 'static/barcodes/OPASKI-KAB--SET.png'),
+('Rekawice ochronne', 'REK-OCHR-M', 'Rekawice ochronne, rozmiar M', 'static/barcodes/REK-OCHR-M.png'),
+('Mlotek stolarski', 'MLT-STOL-01', 'Mlotek stolarski 500g', 'static/barcodes/MLT-STOL-01.png'),
+('Tasma miernicza', 'TASMA-MIERZ-5M', 'Tasma miernicza 5m', 'static/barcodes/TASMA-MIERZ-5M.png'),
+('Latarka LED', 'LATARKA-LED-MINI', 'Mini latarka LED, aluminiowa', 'static/barcodes/LATARKA-LED-MINI.png'),
+('Opakowania babelkowe', 'OPAK-BABEL-10M', 'Folia babelkowa, rolka 10m', 'static/barcodes/OPAK-BABEL-10M.png'),
+('Wypelniacz do paczek', 'WYPELNIACZ-50L', 'Wypelniacz do paczek, 50L worek', 'static/barcodes/WYPELNIACZ-50L.png'),
+('Drukarka etykiet', 'DRUK-ETYK-BT', 'Drukarka etykiet termicznych Bluetooth', 'static/barcodes/DRUK-ETYK-BT.png'),
+('Skaner kodow kreskowych', 'SKANER-USB-01', 'Skaner kodow kreskowych USB', 'static/barcodes/SKANER-USB-01.png'),
+('Paleta drewniana', 'PALETA-EUR-01', 'Standardowa paleta EUR', 'static/barcodes/PALETA-EUR-01.png'),
+('Wozek transportowy', 'WOZEK-SKLAD-01', 'Wozek transportowy skladany', 'static/barcodes/WOZEK-SKLAD-01.png'),
+('Kask ochronny', 'KASK-OCHR-BIAL', 'Kask ochronny, bialy', 'static/barcodes/KASK-OCHR-BIAL.png'),
+('Okulary ochronne', 'OKULARY-OCHR-PRZ', 'Okulary ochronne, przezroczyste', 'static/barcodes/OKULARY-OCHR-PRZ.png');
 
-INSERT INTO locations (code) VALUES
-('A1-01'), ('A1-02'), ('A1-03'), ('A1-04'), ('A1-05'), ('A1-06'),
-('A2-01'), ('A2-02'), ('A2-03'), ('A2-04'), ('A2-05'), ('A2-06'),
-('B1-01'), ('B1-02'), ('B1-03'), ('B1-04'), ('B1-05'), ('B1-06'),
-('B2-01'), ('B2-02'), ('B2-03'), ('B2-04'), ('B2-05'), ('B2-06'),
-('C1-01'), ('C1-02'), ('C1-03'), ('C1-04'), ('C1-05'), ('C1-06'),
-('C2-01'), ('C2-02'), ('C2-03'), ('C2-04'), ('C2-05'), ('C2-06');
+INSERT INTO locations (code, location_barcode_path) VALUES
+('A1-01', 'static/barcodes/A1-01.png'), ('A1-02', 'static/barcodes/A1-02.png'), ('A1-03', 'static/barcodes/A1-03.png'), ('A1-04', 'static/barcodes/A1-04.png'), ('A1-05', 'static/barcodes/A1-05.png'), ('A1-06', 'static/barcodes/A1-06.png'),
+('A2-01', 'static/barcodes/A2-01.png'), ('A2-02', 'static/barcodes/A2-02.png'), ('A2-03', 'static/barcodes/A2-03.png'), ('A2-04', 'static/barcodes/A2-04.png'), ('A2-05', 'static/barcodes/A2-05.png'), ('A2-06', 'static/barcodes/A2-06.png'),
+('B1-01', 'static/barcodes/B1-01.png'), ('B1-02', 'static/barcodes/B1-02.png'), ('B1-03', 'static/barcodes/B1-03.png'), ('B1-04', 'static/barcodes/B1-04.png'), ('B1-05', 'static/barcodes/B1-05.png'), ('B1-06', 'static/barcodes/B1-06.png'),
+('B2-01', 'static/barcodes/B2-01.png'), ('B2-02', 'static/barcodes/B2-02.png'), ('B2-03', 'static/barcodes/B2-03.png'), ('B2-04', 'static/barcodes/B2-04.png'), ('B2-05', 'static/barcodes/B2-05.png'), ('B2-06', 'static/barcodes/B2-06.png'),
+('C1-01', 'static/barcodes/C1-01.png'), ('C1-02', 'static/barcodes/C1-02.png'), ('C1-03', 'static/barcodes/C1-03.png'), ('C1-04', 'static/barcodes/C1-04.png'), ('C1-05', 'static/barcodes/C1-05.png'), ('C1-06', 'static/barcodes/C1-06.png'),
+('C2-01', 'static/barcodes/C2-01.png'), ('C2-02', 'static/barcodes/C2-02.png'), ('C2-03', 'static/barcodes/C2-03.png'), ('C2-04', 'static/barcodes/C2-04.png'), ('C2-05', 'static/barcodes/C2-05.png'), ('C2-06', 'static/barcodes/C2-06.png');
 
 INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (1, (SELECT id FROM locations WHERE code = 'A1-01'), 30),
@@ -185,28 +182,31 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'C2-06'), 3),
 (25, (SELECT id FROM locations WHERE code = 'C2-06'), 20);
 
-INSERT INTO shipments (username) VALUES
-('tomek'),
-('janek'),
-('ania');
-
-INSERT INTO shipment_products (shipment_id, product_id, location_id, quantity) VALUES
-((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
-((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
-((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
-((SELECT id FROM shipments WHERE username = 'janek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
-((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
-((SELECT id FROM shipments WHERE username = 'ania' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
-
-INSERT INTO receives (username) VALUES
-('zofia'),
-('tomek'),
-('piotr');
+-- Wstawianie przyjęć z datą wcześniejszą niż wysyłki, aby zapewnić poprawną kolejność
+INSERT INTO receives (username, receives_date) VALUES
+('zofia', '2025-01-01 10:00:00'),
+('tomek', '2025-01-01 10:00:01'),
+('piotr', '2025-01-01 10:00:02');
 
 INSERT INTO receives_products (receive_id, product_id, location_id, quantity) VALUES
-((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
-((SELECT id FROM receives WHERE username = 'zofia' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
-((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
-((SELECT id FROM receives WHERE username = 'tomek' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
-((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
-((SELECT id FROM receives WHERE username = 'piotr' ORDER BY id DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
+((SELECT id FROM receives WHERE username = 'zofia' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
+((SELECT id FROM receives WHERE username = 'tomek' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
+((SELECT id FROM receives WHERE username = 'piotr' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
+
+
+-- Wstawianie wysyłek z datą późniejszą niż przyjęcia
+INSERT INTO shipments (username, shipment_date) VALUES
+('tomek', '2025-01-01 10:01:00'),
+('janek', '2025-01-01 10:01:01'),
+('ania', '2025-01-01 10:01:02');
+
+INSERT INTO shipment_products (shipment_id, product_id, location_id, quantity) VALUES
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'WRK-BOSCH-01'), (SELECT id FROM locations WHERE code = 'B1-01'), 1),
+((SELECT id FROM shipments WHERE username = 'tomek' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'FOLIA-STRETCH'), (SELECT id FROM locations WHERE code = 'C1-01'), 5),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'PUSZKA-500'), (SELECT id FROM locations WHERE code = 'A1-01'), 50),
+((SELECT id FROM shipments WHERE username = 'janek' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MARKER-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 20),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
+((SELECT id FROM shipments WHERE username = 'ania' ORDER BY shipment_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
