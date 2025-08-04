@@ -56,7 +56,7 @@
                         <th>Data</th>
                         <th>Typ</th>
                         <th>Użytkownik</th>
-                        <th>Ilość w akcji</th>
+                        <th>Lokalizacja</th> <th>Ilość w akcji</th>
                         <th>Stan po akcji</th>
                     </tr>
                 </thead>
@@ -67,13 +67,12 @@
                         <td>{{ item.transaction_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>{{ item.transaction_type }}</td>
                         <td>{{ item.username }}</td>
-                        <td>{{ '%+d'|format(item.quantity_change) }}</td>
+                        <td>{{ item.location_code }}</td> <td>{{ '%+d'|format(item.quantity_change) }}</td>
                         <td><strong>{{ item.stock_after }}</strong></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" style="text-align: center;">Brak historii operacji dla tego produktu.</td>
-                    </tr>
+                        <td colspan="7" style="text-align: center;">Brak historii operacji dla tego produktu.</td> </tr>
                     {% endfor %}
                 </tbody>
             </table>

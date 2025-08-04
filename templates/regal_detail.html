@@ -5,6 +5,7 @@
     <title>Szczegóły Półki {{ polka_code }} - WMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
@@ -24,14 +25,9 @@
     <h1 style="text-align:center;">Półka: {{ polka_code }} (Regał: {{ regal_code }})</h1>
     <hr>
 
-    <!-- KOD KRESKOWY DLA PÓŁKI (LOKALIZACJI) -->
     <div style="text-align:center; margin-bottom: 30px;">
-        {% if location_barcode_path %}
-            <img src="{{ url_for('static', filename=location_barcode_path) }}" alt="Kod Kreskowy Półki {{ polka_code }}" style="width:200px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;">
-            <p>Kod Półki: {{ polka_code }}</p>
-        {% else %}
-            <p>Brak kodu kreskowego dla tej półki.</p>
-        {% endif %}
+        <svg id="polka-barcode" data-polka-code="{{ polka_code }}" style="width:200px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;"></svg>
+        <p>Kod Półki: {{ polka_code }}</p>
     </div>
 
     <h2>Przedmioty na półce:</h2>
@@ -52,11 +48,7 @@
                     <td>{{ item.sku }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>
-                        {% if item.product_barcode_path %}
-                            <img src="{{ url_for('static', filename=item.product_barcode_path) }}" alt="Kod Kreskowy {{ item.sku }}" style="width:100px; height:auto;">
-                        {% else %}
-                            Brak kodu
-                        {% endif %}
+                        <svg class="product-barcode" data-sku="{{ item.sku }}" style="width:100px; height:auto;"></svg>
                     </td>
                 </tr>
                 {% endfor %}
@@ -69,6 +61,43 @@
     <a href="{{ url_for('regal_detail', reg_code=regal_code) }}" class="btn btn-secondary mt-3">Powrót do Regału {{ regal_code }}</a>
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Powrót do Dashboardu</a>
 </div>
+
+<script>
+    // Funkcja do generowania kodów kreskowych
+    function generateBarcodes() {
+        // Generuj kod dla półki
+        const polkaCode = document.getElementById("polka-barcode").getAttribute("data-polka-code");
+        if (polkaCode) {
+            JsBarcode("#polka-barcode", polkaCode, {
+                format: "CODE128", // Domyślny format
+                displayValue: false, // Wartość tekstowa jest już wyświetlana w <p>
+                height: 50,
+                width: 1.5
+            });
+        }
+
+        // Generuj kody dla wszystkich produktów na półce
+        document.querySelectorAll(".product-barcode").forEach(function(svgElement) {
+            const sku = svgElement.getAttribute("data-sku");
+            if (sku) {
+                try {
+                    JsBarcode(svgElement, sku, {
+                        format: "CODE128", 
+                        displayValue: false,
+                        height: 50,
+                        width: 1.5
+                    });
+                } catch (e) {
+                    console.error("Błąd generowania kodu kreskowego dla SKU:", sku, e);
+                    svgElement.innerHTML = "Błąd generowania";
+                }
+            }
+        });
+    }
+
+    // Wywołaj funkcję po załadowaniu strony
+    window.onload = generateBarcodes;
+</script>
 
 </body>
 </html>

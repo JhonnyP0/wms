@@ -28,6 +28,7 @@
         
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
     <header>
@@ -45,8 +46,8 @@
     <div class="container mt-4">
         <h2>Lista Produktów</h2>
         <div class="search-container">
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
-    </div>
+            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Szukaj">
+        </div>
         <hr>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -71,7 +72,8 @@
                     <th>Opis</th>
                     <th>Ilość w Magazynie</th>
                     <th>Lokalizacje</th>
-                    <th>Kod Kreskowy</th> </tr>
+                    <th>Kod Kreskowy</th>
+                </tr>
             </thead>
             <tbody>
                 {% if prods %}
@@ -79,39 +81,53 @@
                         <tr data-href="{{ url_for('product_detail', product_id=prod.product_id) }}" style="cursor: pointer;">
                             <td>{{ prod.product_id }}</td>
                             <td>{{ prod.product_name }}</td>
-                            <td>{{ prod.sku }}</td>
-                            <td>{{ prod.description if prod.description else 'Brak' }}</td>
+                            <td class="sku-cell">{{ prod.sku }}</td> <td>{{ prod.description if prod.description else 'Brak' }}</td>
                             <td>{{ prod.total_quantity }}</td>
                             <td>{{ prod.locations_summary if prod.locations_summary else 'Brak' }}</td>
                             <td>
-                                {% if prod.barcode_image_path %}
-                                    <img src="{{ url_for('static', filename=prod.barcode_image_path) }}" 
-                                                        alt="Kod Kreskowy {{ prod.sku }}" 
-                                                        style="width:150px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;">
-                                {% else %}
-                                    Brak kodu
-                                {% endif %}
+                                <svg class="barcode-svg" data-sku="{{ prod.sku }}"></svg>
                             </td>
                         </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="7">Brak produktów do wyświetlenia.</td> </tr>
+                        <td colspan="7">Brak produktów do wyświetlenia.</td>
+                    </tr>
                 {% endif %}
             </tbody>
         </table>
-
-
     </div>
 
     <script>
-
-
         $(document).ready(function() {
-    $('[data-href]').on('click', function() {
-        window.location.href = $(this).data('href');
-    });
-});
+            $('[data-href]').on('click', function() {
+                window.location.href = $(this).data('href');
+            });
+
+            // Funkcja do generowania kodów kreskowych
+            function generateBarcodes() {
+                // Iteruj po wszystkich elementach SVG z klasą 'barcode-svg'
+                document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
+                    const sku = svgElement.getAttribute("data-sku");
+                    if (sku) {
+                        try {
+                            JsBarcode(svgElement, sku, {
+                                format: "CODE128", // Użyjemy popularnego formatu CODE128
+                                displayValue: false, // Wartość tekstowa nie jest wyświetlana pod kodem
+                                height: 50,
+                                width: 1.5
+                            });
+                        } catch (e) {
+                            console.error("Błąd generowania kodu kreskowego dla SKU:", sku, e);
+                            svgElement.innerHTML = "Błąd generowania";
+                        }
+                    }
+                });
+            }
+
+            // Wywołaj funkcję po załadowaniu strony
+            generateBarcodes();
+        });
 
         function filterTable() {
             let input = document.getElementById("searchInput");

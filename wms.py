@@ -20,88 +20,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-def generate_barcode_image(data_to_encode, folder_path="static/barcodes"):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-    try:
-        barcode_class = Code128(data_to_encode, writer=ImageWriter())
-        filename = f"{data_to_encode.replace('/', '_').replace(' ', '_')}"
-        full_path = barcode_class.save(os.path.join(folder_path, filename))
-
-        relative_path = os.path.join(os.path.basename(folder_path), os.path.basename(full_path))
-        return relative_path
-    except Exception as e:
-        app.logger.error(f"Błąd podczas generowania kodu kreskowego dla '{data_to_encode}': {e}", exc_info=True)
-        return None
-    
-def generate_all_barcodes_command():
-    print("Rozpoczynanie generowania kodów kreskowych dla istniejących produktów i lokalizacji...")
-    conn = db_connect()
-    if conn is None:
-        print("Błąd: Nie można połączyć się z bazą danych.")
-        return
-
-    cursor = conn.cursor(dictionary=True) 
-    
-    try:
-
-        print("\nPrzetwarzanie produktów...")
-        cursor.execute("SELECT id, sku, barcode_image_path FROM products WHERE barcode_image_path IS NULL OR barcode_image_path = ''")
-        products_to_process = cursor.fetchall()
-        
-        if not products_to_process:
-            print("Wszystkie produkty posiadają już kody kreskowe.")
-        else:
-            for product in products_to_process:
-                sku = product['sku']
-                print(f"Generowanie kodu kreskowego dla produktu SKU: {sku}...")
-                barcode_path = generate_barcode_image(sku)
-                
-                if barcode_path:
-                    cursor.execute("UPDATE products SET barcode_image_path = %s WHERE id = %s",
-                                   (barcode_path, product['id']))
-                    conn.commit()
-                    print(f"  - Zaktualizowano produkt {sku} ze ścieżką: {barcode_path}")
-                else:
-                    print(f"  - Nie udało się wygenerować kodu kreskowego dla produktu {sku}.")
-            print("Zakończono przetwarzanie produktów.")
-
-
-        print("\nPrzetwarzanie lokalizacji...")
-        cursor.execute("SELECT id, code, barcode_image_path FROM locations WHERE barcode_image_path IS NULL OR barcode_image_path = ''")
-        locations_to_process = cursor.fetchall()
-
-        if not locations_to_process:
-            print("Wszystkie lokalizacje posiadają już kody kreskowe.")
-        else:
-            for location in locations_to_process:
-                code = location['code']
-                print(f"Generowanie kodu kreskowego dla lokalizacji: {code}...")
-                barcode_path = generate_barcode_image(code) 
-                
-                if barcode_path:
-                    cursor.execute("UPDATE locations SET barcode_image_path = %s WHERE id = %s",
-                                   (barcode_path, location['id']))
-                    conn.commit()
-                    print(f"  - Zaktualizowano lokalizację {code} ze ścieżką: {barcode_path}")
-                else:
-                    print(f"  - Nie udało się wygenerować kodu kreskowego dla lokalizacji {code}.")
-            print("Zakończono przetwarzanie lokalizacji.")
-
-        print("\nGenerowanie kodów kreskowych zakończone.")
-
-    except mysql.connector.Error as err:
-        print(f"Błąd bazy danych podczas generowania kodów kreskowych: {err}")
-        conn.rollback()
-    except Exception as e:
-        print(f"Wystąpił nieoczekiwany błąd podczas generowania kodów kreskowych: {e}")
-        conn.rollback()
-    finally:
-        if conn and conn.is_connected():
-            cursor.close()
-            conn.close()
-
 
 def db_connect():
     return mysql.connector.connect(
@@ -255,7 +173,7 @@ def polka(polka_code, regal_code):
                     p.name AS product_name, 
                     p.sku, 
                     i.quantity, 
-                    p.barcode_image_path AS product_barcode_path -- Dodano: ścieżka kodu kreskowego produktu
+                    p.barcode_image_path AS product_barcode_path
                 FROM inventory i
                 JOIN products p ON i.product_id = p.id
                 JOIN locations l ON i.location_id = l.id
@@ -293,7 +211,6 @@ def logout():
 @app.route('/products', methods=['GET'])
 @login_required
 def products():
-    generate_all_barcodes_command()
     conn = db_connect()
     if conn is None:
         flash('Błąd połączenia z bazą danych.', 'danger')
@@ -310,13 +227,16 @@ def products():
                 p.name AS product_name,
                 p.sku,
                 p.description,
-                p.barcode_image_path, -- <<< DODANO TĘ LINIĘ
+                p.barcode_image_path,
                 COALESCE(SUM(i.quantity), 0) AS total_quantity,
                 GROUP_CONCAT(DISTINCT l.code ORDER BY l.code SEPARATOR ', ') AS locations_summary
             FROM
                 products p
+            -- ### POCZĄTEK ZMIANY ###
+            -- Dołączamy tylko te wpisy z inwentarza, gdzie ilość jest większa od 0.
             LEFT JOIN
-                inventory i ON p.id = i.product_id
+                inventory i ON p.id = i.product_id AND i.quantity > 0
+            -- ### KONIEC ZMIANY ###
             LEFT JOIN
                 locations l ON i.location_id = l.id
         """
@@ -330,7 +250,7 @@ def products():
 
         sql_query += """
             GROUP BY
-                p.id, p.name, p.sku, p.description, p.barcode_image_path -- <<< DODANO TĘ LINIĘ DO GROUP BY
+                p.id, p.name, p.sku, p.description, p.barcode_image_path
             ORDER BY
                 p.name;
         """
@@ -436,18 +356,6 @@ def add_prod():
                 if product_id is None:
                     flash('Nie udało się dodać produktu. Wystąpił błąd w bazie danych.', 'danger')
                     return render_template('add_prod.html', form=form)
-
-
-                barcode_path = generate_barcode_image(sku) 
-                
-                if barcode_path:
-
-                    cursor.execute("UPDATE products SET barcode_image_path = %s WHERE id = %s",
-                                   (barcode_path, product_id))
-                    conn.commit() 
-                    flash(f'Kod kreskowy wygenerowany i zapisany: {barcode_path}', 'info')
-                else:
-                    flash('Nie udało się wygenerować kodu kreskowego dla produktu.', 'warning')
 
                 flash('Produkt został pomyślnie dodany do katalogu produktów!', 'success')
                 return redirect(url_for('products'))
@@ -588,43 +496,54 @@ def product_detail(product_id):
 
     cursor = conn.cursor(dictionary=True)
     try:
+        # 1. Pobierz podstawowe informacje o produkcie
         cursor.execute("SELECT name, sku FROM products WHERE id = %s", (product_id,))
         product_info = cursor.fetchone()
 
         if not product_info:
             flash('Produkt o podanym ID nie został znaleziony.', 'warning')
             return redirect(url_for('products'))
-        
+
+        # 2. Zaktualizowane zapytanie SQL - dodano PARTITION BY location_code
         history_query = """
             SELECT
                 transaction_id,
                 transaction_date,
                 transaction_type,
                 username,
+                location_code,
                 quantity_change,
-                SUM(quantity_change) OVER (ORDER BY transaction_date, transaction_id) AS stock_after
+                -- ### ZMIANA TUTAJ: Dodano PARTITION BY location_code ###
+                -- Oblicza sumę narastająco, ale robi to OSOBNO dla każdej lokalizacji
+                SUM(quantity_change) OVER (PARTITION BY location_code ORDER BY transaction_date, transaction_id) AS stock_after
             FROM (
+                -- Pobierz wszystkie przyjęcia dla tego produktu
                 (
                     SELECT
                         r.id AS transaction_id,
                         r.receives_date AS transaction_date,
                         'Przyjęcie' AS transaction_type,
                         rp.quantity AS quantity_change,
-                        r.username
+                        r.username,
+                        l.code AS location_code
                     FROM receives_products rp
                     JOIN receives r ON rp.receive_id = r.id
+                    JOIN locations l ON rp.location_id = l.id
                     WHERE rp.product_id = %s
                 )
                 UNION ALL
+                -- Pobierz wszystkie wysyłki dla tego produktu
                 (
                     SELECT
                         s.id AS transaction_id,
                         s.shipment_date AS transaction_date,
                         'Wysyłka' AS transaction_type,
                         -sp.quantity AS quantity_change,
-                        s.username
+                        s.username,
+                        l.code AS location_code
                     FROM shipment_products sp
                     JOIN shipments s ON sp.shipment_id = s.id
+                    JOIN locations l ON sp.location_id = l.id
                     WHERE sp.product_id = %s
                 )
             ) AS transactions
@@ -642,8 +561,8 @@ def product_detail(product_id):
             cursor.close()
             conn.close()
 
-    return render_template('product_detail.html', 
-                           product=product_info, 
+    return render_template('product_detail.html',
+                           product=product_info,
                            history=product_history)
 
 @app.route('/get_product_locations/<sku>', methods=['GET'])
@@ -935,6 +854,5 @@ def add_receive():
     return render_template('add_receive.html', form=form)
 
 if __name__ == "__main__":
-    #generate_all_barcodes_command()
     add_admin()
     app.run(host='0.0.0.0', port=5050, debug=True)
