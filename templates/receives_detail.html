@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Szczegóły Przyjęcia - {{ receive_id }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 </head>
 <header>
     <nav>
@@ -17,37 +18,54 @@
     </nav>
 </header>
 <body>
-    <h1>Szczegóły Przyjęcia: {{ receive_id }}</h1>
-    <p>Kompletator: {{ receive_info.username }}</p> 
-    <p>Data utworzenia: {{ receive_info.receives_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    <div id="content-to-print">
+        <h1>Szczegóły Przyjęcia: {{ receive_id }}</h1>
+        <p>Kompletator: {{ receive_info.username }}</p> 
+        <p>Data utworzenia: {{ receive_info.receives_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
 
-    {% if receive_products %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Nazwa Przedmiotu</th>
-                    <th>SKU</th>
-                    <th>Przyjęta Ilość</th>
-                    <th>Opis</th>
-                    <th>Lokalizacja</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in receive_products %}
+        {% if receive_products %}
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ item.product_name }}</td>
-                        <td>{{ item.sku }}</td>
-                        <td>{{ item.received_quantity }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.location_code}}</td>
+                        <th>Nazwa Przedmiotu</th>
+                        <th>SKU</th>
+                        <th>Przyjęta Ilość</th>
+                        <th>Opis</th>
+                        <th>Lokalizacja</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>Brak produktów w tym przyjęciu.</p>
-    {% endif %}
+                </thead>
+                <tbody>
+                    {% for item in receive_products %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.sku }}</td>
+                            <td>{{ item.received_quantity }}</td>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.location_code}}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Brak produktów w tym przyjęciu.</p>
+        {% endif %}
+    </div>
+
+    <button onclick="generatePDF('Przyjecie_{{ receive_id }}.pdf')">Drukuj do PDF</button>
 
     <a href="{{ url_for('receives') }}" class="back-link">Powrót do listy przyjęć</a>
+
+    <script>
+        function generatePDF(filename) {
+            const element = document.getElementById('content-to-print');
+            html2pdf(element, {
+                margin: 10,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            });
+        }
+    </script>
 </body>
 </html>

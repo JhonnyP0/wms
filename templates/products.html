@@ -85,7 +85,7 @@
                             <td>{{ prod.total_quantity }}</td>
                             <td>{{ prod.locations_summary if prod.locations_summary else 'Brak' }}</td>
                             <td>
-                                <svg class="barcode-svg" data-sku="{{ prod.sku }}"></svg>
+                                <svg class="barcode-svg" data-id="{{ prod.product_id }}"></svg>
                             </td>
                         </tr>
                     {% endfor %}
@@ -98,65 +98,70 @@
         </table>
     </div>
 
-    <script>
-        $(document).ready(function() {
-            $('[data-href]').on('click', function() {
-                window.location.href = $(this).data('href');
-            });
-
-            // Funkcja do generowania kodów kreskowych
-            function generateBarcodes() {
-                // Iteruj po wszystkich elementach SVG z klasą 'barcode-svg'
-                document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
-                    const sku = svgElement.getAttribute("data-sku");
-                    if (sku) {
-                        try {
-                            JsBarcode(svgElement, sku, {
-                                format: "CODE128", // Użyjemy popularnego formatu CODE128
-                                displayValue: false, // Wartość tekstowa nie jest wyświetlana pod kodem
-                                height: 50,
-                                width: 1.5
-                            });
-                        } catch (e) {
-                            console.error("Błąd generowania kodu kreskowego dla SKU:", sku, e);
-                            svgElement.innerHTML = "Błąd generowania";
-                        }
-                    }
-                });
-            }
-
-            // Wywołaj funkcję po załadowaniu strony
-            generateBarcodes();
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('[data-href]').on('click', function() {
+            window.location.href = $(this).data('href');
         });
 
-        function filterTable() {
-            let input = document.getElementById("searchInput");
-            let filter = input.value.toLowerCase();
-
-            let table = document.getElementById("productsTable");
-            let tr = table.getElementsByTagName("tr");
-
-            for (let i = 1; i < tr.length; i++) {
-                let found = false;
-                let td = tr[i].getElementsByTagName("td");
-
-                for (let j = 0; j < td.length; j++) {
-                    let cell = td[j];
-                    if (cell) {
-                        if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
-                            found = true;
-                            break;
-                        }
+        // Funkcja do generowania kodów kreskowych
+        function generateBarcodes() {
+            // Iteruj po wszystkich elementach SVG z klasą 'barcode-svg'
+            document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
+                const id = svgElement.getAttribute("data-id");
+                if (id) {
+                    try {
+                        // Dodajemy '000' i dopełniamy zerami do 12 cyfr
+                        const eanValue = ('000000000000' + id).slice(-12);
+                        
+                        JsBarcode(svgElement, eanValue, {
+                            format: "EAN13", // Zmieniono na EAN13
+                            displayValue: true, // Wartość tekstowa nie jest wyświetlana pod kodem
+                            height: 50,
+                            width: 1.5
+                        });
+                    } catch (e) {
+                        console.error("Błąd generowania kodu kreskowego dla ID:", id, e);
+                        svgElement.innerHTML = "Błąd generowania";
                     }
                 }
+            });
+        }
 
-                if (found) {
-                    tr[i].classList.remove("hidden-row");
-                } else {
-                    tr[i].classList.add("hidden-row");
+        // Wywołaj funkcję po załadowaniu strony
+        generateBarcodes();
+    });
+
+    function filterTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toLowerCase();
+
+        let table = document.getElementById("productsTable");
+        let tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let found = false;
+            let td = tr[i].getElementsByTagName("td");
+
+            for (let j = 0; j < td.length; j++) {
+                let cell = td[j];
+                if (cell) {
+                    if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
                 }
             }
+
+            if (found) {
+                tr[i].classList.remove("hidden-row");
+            } else {
+                tr[i].classList.add("hidden-row");
+            }
         }
-    </script>
+    }
+</script>
 </body>
 </html>

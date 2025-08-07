@@ -146,7 +146,31 @@ def register():
 @app.route("/regal/<reg_code>")
 @login_required
 def regal_detail(reg_code):
-    return render_template("shelf.html", reg_code=reg_code)
+    conn = db_connect()
+    if conn is None:
+        flash('Błąd połączenia z bazą danych.', 'danger')
+        return redirect(url_for('dashboard'))
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Pobieranie kodów półek dla danego regału
+        query = """
+                SELECT
+                    code
+                FROM locations
+                WHERE code LIKE %s
+                ORDER BY code;
+                """
+        # Użycie znaku %s w zapytaniu SQL do dopasowania do wzorca
+        cursor.execute(query, (f"{reg_code}-%",))
+        shelves = cursor.fetchall()
+    except mysql.connector.Error as err:
+        flash(f'Wystąpił błąd podczas pobierania danych regału: {err}', 'danger')
+        shelves = []
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+    return render_template("shelf.html", reg_code=reg_code, shelves=shelves)
 
 @app.route("/pozycja/<polka_code>/<regal_code>")
 @login_required
@@ -158,22 +182,13 @@ def polka(polka_code, regal_code):
 
     cursor = conn.cursor(dictionary=True)
     
-    location_barcode_path = None 
-    
     try:
-
-        cursor.execute("SELECT barcode_image_path FROM locations WHERE code = %s", (polka_code,))
-        polka_data = cursor.fetchone()
-        
-        if polka_data and polka_data['barcode_image_path']:
-            location_barcode_path = polka_data['barcode_image_path']
-
         query="""
                 SELECT 
+                    p.id,  
                     p.name AS product_name, 
                     p.sku, 
-                    i.quantity, 
-                    p.barcode_image_path AS product_barcode_path
+                    i.quantity
                 FROM inventory i
                 JOIN products p ON i.product_id = p.id
                 JOIN locations l ON i.location_id = l.id
@@ -195,12 +210,10 @@ def polka(polka_code, regal_code):
             cursor.close()
             conn.close()
 
-
     return render_template("regal_detail.html", 
                            polka_code=polka_code, 
                            items=items, 
-                           regal_code=regal_code,
-                           location_barcode_path=location_barcode_path)
+                           regal_code=regal_code)
 
 @app.route('/logout', methods=['GET'])
 @login_required

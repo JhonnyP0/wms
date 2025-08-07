@@ -5,6 +5,7 @@
     <title>Szczegóły Półki {{ polka_code }} - WMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
@@ -24,31 +25,33 @@
 <div class="container mt-4">
     <h1 style="text-align:center;">Półka: {{ polka_code }} (Regał: {{ regal_code }})</h1>
     <hr>
-
-    <div style="text-align:center; margin-bottom: 30px;">
-        <svg id="polka-barcode" data-polka-code="{{ polka_code }}" style="width:200px; height:auto; border: 1px solid #ccc; padding: 5px; background-color: white;"></svg>
-        <p>Kod Półki: {{ polka_code }}</p>
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <p>Kod kreskowy półki:</p>
+        <svg class="shelf-barcode" data-code="{{ polka_code }}"></svg>
     </div>
-
+    
     <h2>Przedmioty na półce:</h2>
     {% if items %}
         <table class="table table-striped">
             <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Nazwa Produktu</th>
                     <th>SKU</th>
                     <th>Ilość</th>
-                    <th>Kod Kreskowy Produktu</th>
+                    <th>Kod Kreskowy (EAN-13)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in items %}
                 <tr>
+                    <td>{{ item.id}}</td>
                     <td>{{ item.product_name }}</td>
                     <td>{{ item.sku }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>
-                        <svg class="product-barcode" data-sku="{{ item.sku }}" style="width:100px; height:auto;"></svg>
+                        <svg class="barcode-svg" data-id="{{ item.id }}"></svg>
                     </td>
                 </tr>
                 {% endfor %}
@@ -63,41 +66,45 @@
 </div>
 
 <script>
-    // Funkcja do generowania kodów kreskowych
-    function generateBarcodes() {
-        // Generuj kod dla półki
-        const polkaCode = document.getElementById("polka-barcode").getAttribute("data-polka-code");
-        if (polkaCode) {
-            JsBarcode("#polka-barcode", polkaCode, {
-                format: "CODE128", // Domyślny format
-                displayValue: false, // Wartość tekstowa jest już wyświetlana w <p>
-                height: 50,
-                width: 1.5
-            });
-        }
-
-        // Generuj kody dla wszystkich produktów na półce
-        document.querySelectorAll(".product-barcode").forEach(function(svgElement) {
-            const sku = svgElement.getAttribute("data-sku");
-            if (sku) {
+    $(document).ready(function() {
+        // 1. Generowanie kodu kreskowego dla półki (CODE-128)
+        document.querySelectorAll(".shelf-barcode").forEach(function(svgElement) {
+            const shelfCode = svgElement.getAttribute("data-code");
+            if (shelfCode) {
                 try {
-                    JsBarcode(svgElement, sku, {
+                    JsBarcode(svgElement, shelfCode, {
                         format: "CODE128", 
-                        displayValue: false,
+                        displayValue: true, 
                         height: 50,
                         width: 1.5
                     });
                 } catch (e) {
-                    console.error("Błąd generowania kodu kreskowego dla SKU:", sku, e);
+                    console.error("Błąd generowania kodu kreskowego dla półki:", shelfCode, e);
                     svgElement.innerHTML = "Błąd generowania";
                 }
             }
         });
-    }
 
-    // Wywołaj funkcję po załadowaniu strony
-    window.onload = generateBarcodes;
+        // 2. Generowanie kodów kreskowych dla produktów (EAN-13)
+        document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
+            const id = svgElement.getAttribute("data-id");
+            if (id) {
+                try {
+                    const eanValue = ('000000000000' + id).slice(-12);
+                    
+                    JsBarcode(svgElement, eanValue, {
+                        format: "EAN13",
+                        displayValue: true,
+                        height: 50,
+                        width: 1.5
+                    });
+                } catch (e) {
+                    console.error("Błąd generowania kodu kreskowego dla ID:", id, e);
+                    svgElement.innerHTML = "Błąd generowania";
+                }
+            }
+        });
+    });
 </script>
-
 </body>
 </html>
