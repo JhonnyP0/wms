@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash,jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash,jsonify,session
 from functools import wraps
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 import mysql.connector
@@ -6,20 +6,22 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 import sys
 import os
-from barcode import Code128
-from barcode.writer import ImageWriter
-from source import User, LoginForm, RegisterForm, AddProdForm, AddShipmentForm, AddReceiveForm, ReceiveProductForm
+from source import User, LoginForm, RegisterForm, AddProdForm, AddShipmentForm, AddReceiveForm
+from datetime import timedelta
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('API_KEY')
-
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(seconds=60)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+@app.before_request
+def make_session_permanent_each_request():
+    session.permanent = True
 
 def db_connect():
     return mysql.connector.connect(
@@ -89,8 +91,9 @@ def login():
         conn.close()
 
         if user and check_password_hash(user['password_hash'], form.password.data):
+            session.permanent = True
             userobj=User(user['id'], user['username'], user['password_hash'])
-            login_user(userobj)
+            login_user(userobj, remember=False)
             flash('Zalogowano pomyślnie!','success') 
             return redirect(url_for('dashboard'))
         else:
@@ -415,6 +418,7 @@ def shipments_detail(id):
                 p.name AS product_name,
                 p.sku,
                 p.description,
+                p.id AS product_id,
                 l.code as location_code
             FROM
                 shipment_products sp
@@ -462,12 +466,12 @@ def receives_detail(id):
 
         receive_id = receive_info['id']
 
-        query = """
-            SELECT
+        query = """SELECT
                 rp.quantity AS received_quantity,
                 p.name AS product_name,
                 p.sku,
                 p.description,
+                p.id AS product_id,
                 l.code AS location_code
             FROM
                 receives_products rp
@@ -476,8 +480,8 @@ def receives_detail(id):
             JOIN
                 locations l ON rp.location_id = l.id
             WHERE
-                rp.receive_id = %s;
-        """
+                rp.receive_id = %s;"""
+        
         cursor.execute(query, (receive_id,))
         receive_products = cursor.fetchall()
 

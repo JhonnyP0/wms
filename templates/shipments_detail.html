@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <title>Szczegóły Wysyłki - {{ shipment_id }}</title> 
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <header>
     <nav>
@@ -17,37 +19,85 @@
     </nav>
 </header>
 <body>
-    <h1>Szczegóły Wysyłki: {{ shipment_id }}</h1> 
-    <p>Kompletator: {{ shipment_info.username }}</p>
-    <p>Data utworzenia: {{ shipment_info.shipment_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    <div id="content-to-print">
+        <h1>Szczegóły Wysyłki: {{ shipment_id }}</h1> 
+        <p>Kompletator: {{ shipment_info.username }}</p>
+        <p>Data utworzenia: {{ shipment_info.shipment_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
 
-    {% if shipment_products %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Nazwa Przedmiotu</th>
-                    <th>SKU</th>
-                    <th>Wysłana Ilość</th>
-                    <th>Opis</th>
-                    <th>Lokalizacja</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in shipment_products %}
+        {% if shipment_products %}
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ item.product_name }}</td>
-                        <td>{{ item.sku }}</td>
-                        <td>{{ item.shipped_quantity }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.location_code }}</td>
+                        <th>Nazwa Przedmiotu</th>
+                        <th>SKU</th>
+                        <th>Wysłana Ilość</th>
+                        <th>Opis</th>
+                        <th>Lokalizacja</th>
+                        <th>Kod Kreskowy (EAN-13)</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>Brak produktów w tej wysyłce.</p>
-    {% endif %}
+                </thead>
+                <tbody>
+                    {% for item in shipment_products %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.sku }}</td>
+                            <td>{{ item.shipped_quantity }}</td>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.location_code }}</td>
+                            <td>
+                                <svg class="barcode-svg" data-id="{{ item.product_id }}"></svg>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Brak produktów w tej wysyłce.</p>
+        {% endif %}
+    </div>
+
+    <button onclick="generatePDF()">Drukuj do PDF</button>
 
     <a href="{{ url_for('shipments') }}" class="back-link">Powrót do listy wysyłek</a>
+
+    <script>
+        function generateBarcodes() {
+            document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
+                const id = svgElement.getAttribute("data-id");
+                if (id) {
+                    try {
+                        const eanValue = ('000000000000' + id).slice(-12);
+                        JsBarcode(svgElement, eanValue, {
+                            format: "EAN13",
+                            displayValue: true,
+                            height: 50,
+                            width: 1.5
+                        });
+                    } catch (e) {
+                        console.error("Błąd generowania kodu kreskowego dla ID:", id, e);
+                        svgElement.innerHTML = "Błąd generowania";
+                    }
+                }
+            });
+        }
+        generateBarcodes();
+        function generatePDF() {
+            // Najpierw generujemy kody kreskowe
+
+            
+            // Następnie, z opóźnieniem, generujemy PDF
+            setTimeout(function() {
+                const element = document.getElementById('content-to-print');
+                html2pdf(element, {
+                    margin: 10,
+                    filename: 'Wysylka_{{ shipment_id }}.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    // Zmiana na orientację POZIOMĄ
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                });
+            }, 500); // Opóźnienie 500ms
+        }
+    </script>
 </body>
 </html>

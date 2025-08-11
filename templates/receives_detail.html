@@ -5,6 +5,7 @@
     <title>Szczegóły Przyjęcia - {{ receive_id }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='postaccess.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <header>
     <nav>
@@ -32,6 +33,7 @@
                         <th>Przyjęta Ilość</th>
                         <th>Opis</th>
                         <th>Lokalizacja</th>
+                        <th>Kod Kreskowy (EAN-13)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,6 +44,9 @@
                             <td>{{ item.received_quantity }}</td>
                             <td>{{ item.description }}</td>
                             <td>{{ item.location_code}}</td>
+                            <td>
+                                <svg class="barcode-svg" data-id="{{ item.product_id }}"></svg>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -51,20 +56,48 @@
         {% endif %}
     </div>
 
-    <button onclick="generatePDF('Przyjecie_{{ receive_id }}.pdf')">Drukuj do PDF</button>
+    <button onclick="generatePDF()">Drukuj do PDF</button>
 
     <a href="{{ url_for('receives') }}" class="back-link">Powrót do listy przyjęć</a>
 
     <script>
-        function generatePDF(filename) {
-            const element = document.getElementById('content-to-print');
-            html2pdf(element, {
-                margin: 10,
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        function generateBarcodes() {
+            document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
+                const id = svgElement.getAttribute("data-id");
+                if (id) {
+                    try {
+                        const eanValue = ('000000000000' + id).slice(-12);
+                        JsBarcode(svgElement, eanValue, {
+                            format: "EAN13",
+                            displayValue: true,
+                            height: 50,
+                            width: 1.5
+                        });
+                    } catch (e) {
+                        console.error("Błąd generowania kodu kreskowego dla ID:", id, e);
+                        svgElement.innerHTML = "Błąd generowania";
+                    }
+                }
             });
+        }
+
+        generateBarcodes();
+    
+        function generatePDF() {
+            // Najpierw generujemy kody kreskowe
+            
+            // Następnie, z opóźnieniem, generujemy PDF
+            setTimeout(function() {
+                const element = document.getElementById('content-to-print');
+                html2pdf(element, {
+                    margin: 10,
+                    filename: 'Przyjecie_{{ receive_id }}.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    // Zmiana na orientację POZIOMĄ
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                });
+            }, 500); // Opóźnienie 500ms
         }
     </script>
 </body>
