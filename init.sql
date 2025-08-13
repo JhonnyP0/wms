@@ -182,7 +182,6 @@ INSERT INTO inventory (product_id, location_id, quantity) VALUES
 (24, (SELECT id FROM locations WHERE code = 'C2-06'), 3),
 (25, (SELECT id FROM locations WHERE code = 'C2-06'), 20);
 
--- Wstawianie przyjęć z datą wcześniejszą niż wysyłki, aby zapewnić poprawną kolejność
 INSERT INTO receives (username, receives_date) VALUES
 ('zofia', '2025-01-01 10:00:00'),
 ('tomek', '2025-01-01 10:00:01'),
@@ -196,8 +195,6 @@ INSERT INTO receives_products (receive_id, product_id, location_id, quantity) VA
 ((SELECT id FROM receives WHERE username = 'piotr' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'SRB-KRZYZ-01'), (SELECT id FROM locations WHERE code = 'A1-01'), 10),
 ((SELECT id FROM receives WHERE username = 'piotr' ORDER BY receives_date DESC LIMIT 1), (SELECT id FROM products WHERE sku = 'MLT-STOL-01'), (SELECT id FROM locations WHERE code = 'A1-02'), 3);
 
-
--- Wstawianie wysyłek z datą późniejszą niż przyjęcia
 INSERT INTO shipments (username, shipment_date) VALUES
 ('tomek', '2025-01-01 10:01:00'),
 ('janek', '2025-01-01 10:01:01'),

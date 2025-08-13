@@ -82,10 +82,6 @@
         }
         generateBarcodes();
         function generatePDF() {
-            // Najpierw generujemy kody kreskowe
-
-            
-            // Następnie, z opóźnieniem, generujemy PDF
             setTimeout(function() {
                 const element = document.getElementById('content-to-print');
                 html2pdf(element, {
@@ -93,10 +89,9 @@
                     filename: 'Wysylka_{{ shipment_id }}.pdf',
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2 },
-                    // Zmiana na orientację POZIOMĄ
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
                 });
-            }, 500); // Opóźnienie 500ms
+            }, 500);
         }
     </script>
 </body>

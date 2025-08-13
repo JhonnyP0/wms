@@ -106,19 +106,19 @@
             window.location.href = $(this).data('href');
         });
 
-        // Funkcja do generowania kodów kreskowych
+
         function generateBarcodes() {
-            // Iteruj po wszystkich elementach SVG z klasą 'barcode-svg'
+
             document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
                 const id = svgElement.getAttribute("data-id");
                 if (id) {
                     try {
-                        // Dodajemy '000' i dopełniamy zerami do 12 cyfr
+
                         const eanValue = ('000000000000' + id).slice(-12);
                         
                         JsBarcode(svgElement, eanValue, {
-                            format: "EAN13", // Zmieniono na EAN13
-                            displayValue: true, // Wartość tekstowa nie jest wyświetlana pod kodem
+                            format: "EAN13", 
+                            displayValue: true, 
                             height: 50,
                             width: 1.5
                         });
@@ -130,7 +130,6 @@
             });
         }
 
-        // Wywołaj funkcję po załadowaniu strony
         generateBarcodes();
     });
 

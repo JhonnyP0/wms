@@ -155,7 +155,6 @@ def regal_detail(reg_code):
         return redirect(url_for('dashboard'))
     cursor = conn.cursor(dictionary=True)
     try:
-        # Pobieranie kodów półek dla danego regału
         query = """
                 SELECT
                     code
@@ -163,7 +162,6 @@ def regal_detail(reg_code):
                 WHERE code LIKE %s
                 ORDER BY code;
                 """
-        # Użycie znaku %s w zapytaniu SQL do dopasowania do wzorca
         cursor.execute(query, (f"{reg_code}-%",))
         shelves = cursor.fetchall()
     except mysql.connector.Error as err:
@@ -513,15 +511,12 @@ def product_detail(product_id):
 
     cursor = conn.cursor(dictionary=True)
     try:
-        # 1. Pobierz podstawowe informacje o produkcie
         cursor.execute("SELECT name, sku FROM products WHERE id = %s", (product_id,))
         product_info = cursor.fetchone()
 
         if not product_info:
             flash('Produkt o podanym ID nie został znaleziony.', 'warning')
             return redirect(url_for('products'))
-
-        # 2. Zaktualizowane zapytanie SQL - dodano PARTITION BY location_code
         history_query = """
             SELECT
                 transaction_id,

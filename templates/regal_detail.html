@@ -67,7 +67,6 @@
 
 <script>
     $(document).ready(function() {
-        // 1. Generowanie kodu kreskowego dla półki (CODE-128)
         document.querySelectorAll(".shelf-barcode").forEach(function(svgElement) {
             const shelfCode = svgElement.getAttribute("data-code");
             if (shelfCode) {
@@ -85,7 +84,6 @@
             }
         });
 
-        // 2. Generowanie kodów kreskowych dla produktów (EAN-13)
         document.querySelectorAll(".barcode-svg").forEach(function(svgElement) {
             const id = svgElement.getAttribute("data-id");
             if (id) {
