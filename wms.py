@@ -13,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('API_KEY')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(seconds=60)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=3)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
